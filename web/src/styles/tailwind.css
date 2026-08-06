@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* shadcn-style tokens (HSL channels) — dark stage for the redesigned dashboard */
+:root{
+  --background:240 15% 5%;
+  --foreground:225 30% 96%;
+  --card:225 22% 11%;
+  --card-foreground:225 30% 96%;
+  --muted:225 16% 20%;
+  --muted-foreground:225 12% 68%;
+  --primary:222 90% 62%;
+  --border:225 20% 22%;
+}
+
+/* ---- Aceternity aurora ---- */
+.aurora-flow{position:absolute;inset:-40%;opacity:.32;filter:blur(30px);mix-blend-mode:screen;
+  background-image:
+    repeating-linear-gradient(100deg,#0b0c10 0%,#0b0c10 7%,transparent 10%,transparent 12%,#0b0c10 16%),
+    repeating-linear-gradient(100deg,#3b5bdb 10%,#6a3bd6 15%,#4f7cff 20%,#16b8c8 25%,#7c4dff 30%);
+  background-size:300% 200%,220% 120%;background-position:50% 50%,50% 50%;
+  animation:aurora 60s linear infinite}
+.aurora-orb{position:absolute;border-radius:50%;filter:blur(120px);opacity:.4}
+.aurora-orb--blue{width:640px;height:640px;left:-8%;top:-8%;background:radial-gradient(circle,#2f5bd0,transparent 62%)}
+.aurora-orb--violet{width:720px;height:720px;right:-10%;top:6%;background:radial-gradient(circle,#6a3bd6,transparent 62%);opacity:.34}
+.aurora-orb--teal{width:600px;height:600px;right:16%;bottom:-16%;background:radial-gradient(circle,#16b8c8,transparent 62%);opacity:.34}
+.aurora-grain{position:absolute;inset:0;opacity:.28;mix-blend-mode:overlay;background-size:200px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ---- Aceternity glowing card border (follows cursor) ---- */
+.glow-card{position:relative;isolation:isolate}
+.glow-card::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
+  background:radial-gradient(240px circle at var(--gx,50%) var(--gy,0%),rgba(140,170,255,.8),rgba(120,220,220,.25) 40%,transparent 70%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+  opacity:0;transition:opacity .3s ease}
+.glow-card:hover::before{opacity:1}
+@media(prefers-reduced-motion:reduce){.aurora-flow{animation:none}}
+
+/* ---- photographic ambient lighting (near-black stage) ---- */
+.aurora-flow { display: none !important; }
+.aurora-orb { position: absolute; border-radius: 50%; filter: blur(150px); mix-blend-mode: screen; will-change: transform; }
+.aurora-orb--blue { width: 940px; height: 940px; left: -26%; top: -32%;
+  background: radial-gradient(circle, #1f52dd, transparent 60%); opacity: .22; animation: orb-a 46s ease-in-out infinite; }
+.aurora-orb--teal { width: 780px; height: 780px; left: 40%; top: 40%; transform: translate(-50%, -35%);
+  background: radial-gradient(circle, #0fb9c2, transparent 60%); opacity: .14; animation: orb-b 60s ease-in-out infinite; }
+.aurora-orb--violet { width: 700px; height: 700px; right: -16%; top: 16%;
+  background: radial-gradient(circle, #7b3ff2, transparent 60%); opacity: .13; animation: orb-c 54s ease-in-out infinite; }
+.aurora-grain { opacity: .18; }
+@keyframes orb-a { 0%,100% { transform: translate(0,0); } 50% { transform: translate(54px,42px); } }
+@keyframes orb-b { 0%,100% { transform: translate(-50%,-35%); } 50% { transform: translate(-46%,-39%); } }
+@keyframes orb-c { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-44px,32px); } }
+@media (prefers-reduced-motion: reduce) { .aurora-orb { animation: none; } }

@@ -1,0 +1,28 @@
+# ── Lodestar monorepo — root ignores (web/ and app/ also have their own) ──
+
+# Claude Code local state
+.claude/
+
+# dependencies
+node_modules/
+**/node_modules/
+
+# env files — never commit (the app's EXPO_PUBLIC_* keys still ship inside the built APK)
+.env
+.env.*
+!.env.example
+
+# build output
+web/dist/
+web/dist-ssr/
+app/dist/
+app/.expo/
+
+# generated native projects (recreated by `expo prebuild`)
+app/android/
+app/ios/
+
+# logs / OS
+*.log
+.DS_Store
+Thumbs.db

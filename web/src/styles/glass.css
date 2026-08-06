@@ -1,0 +1,74 @@
+/* ===========================================================
+   GLASS MATERIAL — single source of truth (from LiquidButton)
+   =========================================================== */
+:root {
+  --glass-radius: 22px;
+  --glass-blur: 3px;
+  --glass-fill: rgba(255, 255, 255, 0.022);
+  --glass-highlight: radial-gradient(120% 82% at 50% -12%, rgba(255,255,255,0.10), transparent 55%);
+  --glass-noise-opacity: 0.05;
+  --glass-shadow:
+    0 0 8px rgba(0,0,0,0.03), 0 2px 6px rgba(0,0,0,0.08),
+    inset 3px 3px 0.5px -3.5px rgba(255,255,255,0.09),
+    inset -3px -3px 0.5px -3.5px rgba(255,255,255,0.85),
+    inset 1px 1px 1px -0.5px rgba(255,255,255,0.6),
+    inset -1px -1px 1px -0.5px rgba(255,255,255,0.6),
+    inset 0 0 6px 6px rgba(255,255,255,0.12),
+    inset 0 0 2px 2px rgba(255,255,255,0.06),
+    0 0 12px rgba(0,0,0,0.15);
+  --glass-drop: 0 2px 6px rgba(0,0,0,.4), 0 18px 44px rgba(0,0,0,.5);
+  --glass-drop-hover: 0 6px 14px rgba(0,0,0,.45), 0 34px 80px rgba(0,0,0,.6);
+}
+
+.glass {
+  position: relative;
+  border-radius: var(--glass-radius);
+  isolation: isolate;
+  box-shadow: var(--glass-drop);
+  transition: transform .45s cubic-bezier(.22,1,.36,1), box-shadow .45s cubic-bezier(.22,1,.36,1);
+}
+.glass > .glass__refract, .glass > .glass__shadow, .glass > .glass__tint {
+  position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+}
+.glass > .glass__refract {
+  z-index: 0; overflow: hidden; background: var(--glass-fill);
+  backdrop-filter: url(#container-glass) blur(var(--glass-blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+}
+.glass > .glass__shadow { z-index: 1; box-shadow: var(--glass-shadow); }
+.glass > .glass__tint { z-index: 1; background: var(--glass-highlight); }
+.glass > .glass__tint::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  opacity: var(--glass-noise-opacity); mix-blend-mode: overlay; background-size: 160px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* real children float above the material */
+.glass > :not(.glass__refract):not(.glass__shadow):not(.glass__tint):not(.cg-glow) { position: relative; z-index: 2; }
+
+/* variant hierarchy — one family, different strength */
+[data-glass="focus"]   { --glass-blur: 4px; --glass-fill: rgba(255,255,255,0.04);  --glass-radius: 26px; }
+[data-glass="subject"] { --glass-blur: 3px; --glass-fill: rgba(255,255,255,0.026); }
+[data-glass="soft"]    { --glass-blur: 2px; --glass-fill: rgba(255,255,255,0.014); }
+[data-glass="input"]   { --glass-blur: 2px; --glass-fill: rgba(255,255,255,0.02);  --glass-radius: 14px; }
+[data-glass="panel"]   { --glass-radius: 18px; }
+
+.glass[data-interactive] { cursor: pointer; }
+.glass[data-interactive]:hover { transform: translateY(-4px); box-shadow: var(--glass-drop-hover); }
+.glass[data-interactive]:active { transform: scale(.985); }
+@media (prefers-reduced-motion: reduce) { .glass { transition: none; } }
+
+/* dock — strongest refraction, same tokens */
+.glass-dock-bar {
+  background: rgba(255,255,255,0.06);
+  box-shadow: var(--glass-shadow), 0 22px 54px rgba(0,0,0,.62);
+  backdrop-filter: url(#container-glass) blur(8px) saturate(160%);
+  -webkit-backdrop-filter: blur(8px) saturate(160%);
+}
+
+/* nav pill variant + brand orb */
+[data-glass="nav"] { --glass-radius: 999px; --glass-blur: 9px; --glass-fill: rgba(255,255,255,0.05); }
+.nav-orb {
+  width: 30px; height: 30px; border-radius: 999px; flex: none;
+  background: radial-gradient(circle at 34% 28%, #46474e, #0c0c11 72%);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.45), 0 0 0 1px rgba(255,255,255,.1);
+}

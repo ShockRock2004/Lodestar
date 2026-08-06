@@ -1,0 +1,4 @@
+url,difficulty,topic,date,status,notes
+https://leetcode.com/problems/two-sum/,Easy,Array;Hash Table,2026-08-01,solved,"Hash map for O(n) lookup"
+https://leetcode.com/problems/trapping-rain-water/,Hard,Array;Two Pointers;Dynamic Programming,2026-08-03,todo,
+https://leetcode.com/problems/valid-parentheses/,Easy,String;Stack,2026-08-02,todo,"Stack of opening brackets"
