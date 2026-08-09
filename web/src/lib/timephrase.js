@@ -37,6 +37,16 @@ export const toHHMM = (mins) => {
 // Human label for a range: "09:00 – 10:30", or "09:00" for a single point.
 export const fmtRange = (start, end) => (end == null ? toHHMM(start) : `${toHHMM(start)} – ${toHHMM(end)}`)
 
+// 12-hour display — what every surface shows. 24-hour stays the storage format.
+export const to12h = (mins) => {
+  const m = ((Math.round(mins) % 1440) + 1440) % 1440
+  const h24 = Math.floor(m / 60)
+  const mm = m % 60
+  const h = h24 % 12 === 0 ? 12 : h24 % 12
+  return `${h}:${String(mm).padStart(2, '0')}${h24 < 12 ? 'am' : 'pm'}`
+}
+export const fmtRange12 = (start, end) => (end == null ? to12h(start) : `${to12h(start)} – ${to12h(end)}`)
+
 export function parseObjective(input) {
   const raw = String(input == null ? '' : input).trim()
   if (!raw) return null

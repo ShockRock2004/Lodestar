@@ -4,46 +4,44 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Card } from '../components/ui/card.jsx'
 import Reveal from '../components/Reveal.jsx'
 import { IconPlus, IconTrash, IconClose, IconClock, IconChecklist, IconAlert } from '../components/icons.jsx'
-import { useChecklists, progressOf, urgentFeed, newItem } from '../lib/checklists.js'
-import { URGENCY, URGENCY_ORDER, urgencyOf } from '../lib/urgency.js'
-import { parseObjective, fmtRange, toHHMM, timeState, nowMins } from '../lib/timephrase.js'
+import { useChecklists, progressOf, urgentFeed, newItem, urgentOpen } from '../lib/checklists.js'
+import { urgencyOf } from '../lib/urgency.js'
+import { parseObjective, fmtRange12, to12h, timeState, nowMins } from '../lib/timephrase.js'
 
 /* ---------- shared bits ---------- */
 
-// Urgency is carried by bar count + wording as well as hue, so it survives
-// greyscale and colour-blind viewing (WCAG 1.4.1).
-function UrgencyMark({ level, showLabel = true, size = 'md' }) {
-  const u = urgencyOf(level)
+// Urgency is a property of the objective, not the checklist, and has two states.
+// The word rides along with the hue so the level never depends on colour alone.
+function UrgentMark({ on, withLabel = false }) {
+  if (!on) return null
+  const u = urgencyOf(true)
   return (
-    <span className={'ck-urg ck-urg--' + size} style={{ color: u.color }}>
-      <span className="ck-urg-bars" aria-hidden="true">
-        {[0, 1, 2].map((i) => <i key={i} style={{ background: i < u.bars ? u.color : 'currentColor', opacity: i < u.bars ? 1 : 0.22 }} />)}
-      </span>
-      {showLabel && <span className="ck-urg-l">{u.label}</span>}
+    <span className="ck-urgmark" style={{ color: u.color }} title="Urgent">
+      <span className="ck-urgmark-bars" aria-hidden="true"><i /><i /><i /></span>
+      {withLabel && <span>Urgent</span>}
+      {!withLabel && <span className="sr-only">Urgent</span>}
     </span>
   )
 }
 
-// Bordered chip — used only inside the modal editor, where density is low.
+// Bordered chip — modal editor only, where density is low.
 function TimeChip({ item, state }) {
   if (item.start == null) return null
   return (
     <span className={'ck-time' + (state ? ' is-' + state : '')}>
       {state === 'now' && <i className="ck-time-live" aria-hidden="true" />}
-      {fmtRange(item.start, item.end)}
+      {fmtRange12(item.start, item.end)}
     </span>
   )
 }
 
-// Flat text — used on the board. A filled chip per objective was the main source of
-// visual noise once several boxes sat side by side, so out here the time is just
-// tinted type and only "now" earns a mark.
-function TimeText({ item, state, showEnd = false }) {
+// Flat tinted type — the board. A filled chip per objective was the main noise source.
+function TimeText({ item, state }) {
   if (item.start == null) return null
   return (
     <span className={'ck-t' + (state ? ' is-' + state : '')}>
       {state === 'now' && <i className="ck-t-live" aria-hidden="true" />}
-      {showEnd ? fmtRange(item.start, item.end) : toHHMM(item.start)}
+      {to12h(item.start)}
     </span>
   )
 }
@@ -57,16 +55,16 @@ function Tick({ done, onClick, label }) {
   )
 }
 
-/* ---------- top-left rail: urgent & pending / upcoming ---------- */
+/* ---------- right rail: urgent & upcoming ---------- */
 function UrgentCard({ lists, onOpen }) {
   const [, tick] = useState(0)
-  // Re-render each minute so "now" / "soon" stay truthful without a reload.
+  // Re-render each minute so "now" / "late" stay truthful without a reload.
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 60000)
     return () => clearInterval(t)
   }, [])
 
-  const feed = useMemo(() => urgentFeed(lists).slice(0, 5), [lists])
+  const feed = useMemo(() => urgentFeed(lists).slice(0, 6), [lists])
   const now = nowMins()
 
   return (
@@ -83,19 +81,15 @@ function UrgentCard({ lists, onOpen }) {
         {feed.length === 0 && (
           <div className="ck-empty-sm">All clear. Add a checklist to see what&rsquo;s next here.</div>
         )}
-        {/* One line per objective. The second line (source checklist) and the filled
-            time chip made six of these read as a wall, so the source is folded inline
-            and the time is plain type. */}
+        {/* time first, then the objective */}
         {feed.map((r) => {
           const state = timeState(r.item, now)
           return (
             <button type="button" key={r.item.id} className="ck-urow" onClick={() => onOpen(r.listId)}
-              title={`${r.item.text} — ${r.listTitle} · ${r.urgency.label} urgency`}
-              aria-label={`${r.item.text}, ${r.listTitle}, ${r.urgency.label} urgency`}>
-              <UrgencyMark level={r.urgency.key} showLabel={false} size="sm" />
+              title={`${r.item.text} — ${r.listTitle}${r.item.urgent ? ' · urgent' : ''}`}
+              aria-label={`${r.item.text}, ${r.listTitle}${r.item.urgent ? ', urgent' : ''}`}>
+              <span className="ck-urow-mark">{r.item.urgent ? <UrgentMark on /> : <span className="ck-urow-pip" aria-hidden="true" />}</span>
               <span className="ck-urow-time"><TimeText item={r.item} state={state} /></span>
-              {/* the source checklist lives in the tooltip/label rather than inline —
-                  it truncated to "· Int…" on half the rows and read as noise */}
               <span className="ck-urow-t">{r.item.text}</span>
               {state === 'past' && <span className="ck-flag is-late">late</span>}
               {state === 'now' && <span className="ck-flag is-now">now</span>}
@@ -107,43 +101,17 @@ function UrgentCard({ lists, onOpen }) {
   )
 }
 
-/* ---------- a checklist, as a large box ---------- */
+/* ---------- a checklist, as a card: name + progress, nothing else ---------- */
 function ListBox({ list, onOpen }) {
   const p = progressOf(list)
-  const u = urgencyOf(list.urgency)
-  // A box carries title, urgency and progress. It used to also list three objectives
-  // with a filled time chip each, which is what made a row of boxes read as clutter —
-  // now it shows only what is up next, in one quiet line.
-  const next = list.items.find((i) => !i.done)
-  const remaining = p.total - p.done
   return (
     <button type="button" className="ck-box-btn" onClick={() => onOpen(list.id)} aria-label={`Open ${list.title}`}>
-      <Card variant="soft" className="cg-w ck-box" style={{ '--u': u.color }}>
-        <span className="ck-box-edge" aria-hidden="true" style={{ background: u.color }} />
-        <div className="ck-box-head">
-          <h3 className="ck-box-title">{list.title}</h3>
-          <UrgencyMark level={list.urgency} />
-        </div>
-
-        <div className="ck-box-next">
-          {p.total === 0 ? <span className="ck-quiet">No objectives yet</span>
-            : !next ? <span className="ck-done-note">Every objective cleared</span>
-              : (
-                <>
-                  <span className="ck-box-next-k">Next</span>
-                  <span className="ck-box-next-t">
-                    <TimeText item={next} state={timeState(next)} />
-                    <span className="ck-box-next-x">{next.text}</span>
-                  </span>
-                  {remaining > 1 && <span className="ck-quiet">+{remaining - 1} more</span>}
-                </>
-              )}
-        </div>
-
+      <Card variant="soft" className="cg-w ck-box">
+        <h3 className="ck-box-title"><span>{list.title}</span></h3>
         <div className="ck-box-foot">
           <div className="ck-bar" role="progressbar" aria-valuenow={p.pct} aria-valuemin={0} aria-valuemax={100}
             aria-label={`${list.title} progress`}>
-            <i style={{ width: p.pct + '%', background: p.complete ? '#2FB893' : u.color }} />
+            <i style={{ width: p.pct + '%', background: p.complete ? '#2FB893' : '#e6e6e6' }} />
           </div>
           <span className="ck-box-count">{p.done}/{p.total}</span>
           <span className="ck-box-pct">{p.pct}%</span>
@@ -153,25 +121,26 @@ function ListBox({ list, onOpen }) {
   )
 }
 
-/* ---------- the big add tile ---------- */
+/* ---------- the add tile, sized exactly like a card ---------- */
 function AddTile({ onClick }) {
   return (
     <button type="button" className="ck-add" onClick={onClick} aria-label="New checklist">
       <span className="ck-add-plus"><IconPlus /></span>
       <span className="ck-add-t">New checklist</span>
-      <span className="ck-add-s">Title it, then add objectives</span>
     </button>
   )
 }
 
-/* ---------- left drawer: compose + edit ---------- */
+/* ---------- modal: compose + edit ---------- */
 function ObjectiveInput({ onAdd }) {
   const [text, setText] = useState('')
+  const [urgent, setUrgent] = useState(false)
   const preview = useMemo(() => (text.trim() ? parseObjective(text) : null), [text])
   const submit = () => {
     if (!text.trim()) return
-    onAdd(text)
+    onAdd(text, urgent)
     setText('')
+    setUrgent(false)
   }
   return (
     <div className="ck-objin">
@@ -181,46 +150,50 @@ function ObjectiveInput({ onAdd }) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
-          placeholder="Add an objective — or 09:00 - 10:30 Revise graphs"
+          placeholder="09:00am - 10:00am Revise graphs"
           aria-label="New objective"
         />
         <button type="button" className="ck-addbtn" onClick={submit} disabled={!text.trim()} aria-label="Add objective">
           <IconPlus />
         </button>
       </div>
-      {preview && (
-        <div className="ck-preview">
-          {preview.start != null ? (
-            <>
-              <span className="ck-preview-k"><IconClock /> timed</span>
-              <span className="ck-time is-later">{fmtRange(preview.start, preview.end)}</span>
-              <span className="ck-preview-t">{preview.text}</span>
-            </>
-          ) : (
-            <>
-              <span className="ck-preview-k">text</span>
-              <span className="ck-preview-t">{preview.text}</span>
-            </>
-          )}
-        </div>
-      )}
+
+      <div className="ck-objin-meta">
+        <label className="ck-check">
+          <input type="checkbox" checked={urgent} onChange={(e) => setUrgent(e.target.checked)} />
+          <span className="ck-check-box" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M6 12l4 4 8-8" fill="none" stroke="#0b0b0b" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </span>
+          <span className="ck-check-l">Urgent</span>
+        </label>
+        {preview && (
+          <span className="ck-preview">
+            {preview.start != null ? (
+              <>
+                <span className="ck-preview-k"><IconClock /> timed</span>
+                <span className="ck-time">{fmtRange12(preview.start, preview.end)}</span>
+              </>
+            ) : <span className="ck-preview-k">text</span>}
+            <span className="ck-preview-t">{preview.text}</span>
+          </span>
+        )}
+      </div>
     </div>
   )
 }
 
-function Drawer({ mode, list, api, onClose }) {
+function Modal({ mode, list, api, onClose }) {
   const rm = useReducedMotion()
   const [draftTitle, setDraftTitle] = useState('')
-  const [draftUrg, setDraftUrg] = useState('normal')
   const [draftItems, setDraftItems] = useState([])
   const [confirmDel, setConfirmDel] = useState(false)
   const titleRef = useRef(null)
   const creating = mode === 'new'
 
   useEffect(() => {
-    if (creating) { setDraftTitle(''); setDraftUrg('normal'); setDraftItems([]) }
+    if (creating) { setDraftTitle(''); setDraftItems([]) }
     setConfirmDel(false)
-    const t = setTimeout(() => { if (titleRef.current) titleRef.current.focus() }, 260)
+    const t = setTimeout(() => { if (titleRef.current) titleRef.current.focus() }, 240)
     return () => clearTimeout(t)
   }, [mode, list && list.id]) // eslint-disable-line
 
@@ -231,20 +204,22 @@ function Drawer({ mode, list, api, onClose }) {
   }, [onClose])
 
   const title = creating ? draftTitle : (list ? list.title : '')
-  const urgency = creating ? draftUrg : (list ? list.urgency : 'normal')
   const items = creating ? draftItems : (list ? list.items : [])
   const p = { done: items.filter((i) => i.done).length, total: items.length }
   const pct = p.total ? Math.round((p.done / p.total) * 100) : 0
 
   const setTitle = (v) => (creating ? setDraftTitle(v) : api.updateList(list.id, { title: v }))
-  const setUrg = (v) => (creating ? setDraftUrg(v) : api.updateList(list.id, { urgency: v }))
-  const addObjective = (line) => {
-    if (creating) { const it = newItem(line); if (it) setDraftItems((xs) => [...xs, it]) }
-    else api.addItem(list.id, line)
+  const addObjective = (line, urgent) => {
+    if (creating) { const it = newItem(line, urgent); if (it) setDraftItems((xs) => [it, ...xs]) }
+    else api.addItem(list.id, line, urgent)
   }
   const toggle = (id) => {
     if (creating) setDraftItems((xs) => xs.map((i) => (i.id === id ? { ...i, done: !i.done } : i)))
     else api.toggleItem(list.id, id)
+  }
+  const toggleUrgent = (id) => {
+    if (creating) setDraftItems((xs) => xs.map((i) => (i.id === id ? { ...i, urgent: !i.urgent } : i)))
+    else api.updateItem(list.id, id, { urgent: !items.find((i) => i.id === id).urgent })
   }
   const drop = (id) => {
     if (creating) setDraftItems((xs) => xs.filter((i) => i.id !== id))
@@ -254,12 +229,10 @@ function Drawer({ mode, list, api, onClose }) {
   const create = () => {
     const t = draftTitle.trim()
     if (!t) return
-    api.addList({ title: t, urgency: draftUrg, items: draftItems, created: new Date().toISOString() })
+    api.addList({ title: t, items: draftItems, created: new Date().toISOString() })
     onClose()
   }
 
-  // Centred floating panel rather than a side drawer: editing a checklist is a focused
-  // task, and the middle of the screen is where the eye already is after clicking a box.
   const pop = rm
     ? { initial: false, animate: {}, exit: {} }
     : {
@@ -277,102 +250,79 @@ function Drawer({ mode, list, api, onClose }) {
         initial={rm ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         transition={{ duration: 0.22 }} />
       <div className="ck-modal-wrap" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <motion.div className="ck-modal" role="dialog" aria-modal="true"
-        aria-label={creating ? 'New checklist' : `Edit ${title}`} {...pop}>
-        <div className="ck-modal-head">
-          <div className="ck-eye">{creating ? 'New checklist' : 'Checklist'}</div>
-          <button type="button" className="ck-x" onClick={onClose} aria-label="Close"><IconClose /></button>
-        </div>
-
-        <div className="ck-modal-body">
-          <label className="ck-field">
-            <span className="ck-label">Title</span>
-            <input ref={titleRef} className="ck-input ck-input--title" value={title}
-              onChange={(e) => setTitle(e.target.value)} placeholder="Interview week sprint" aria-label="Checklist title" />
-          </label>
-
-          <div className="ck-field">
-            <span className="ck-label">Urgency</span>
-            <div className="ck-seg" role="radiogroup" aria-label="Urgency">
-              {URGENCY_ORDER.map((k) => {
-                const u = URGENCY[k]
-                const on = urgency === k
-                return (
-                  <button type="button" key={k} role="radio" aria-checked={on}
-                    className={'ck-seg-b' + (on ? ' is-on' : '')} onClick={() => setUrg(k)}
-                    style={on ? { color: u.color, background: u.dim, borderColor: u.edge } : undefined}>
-                    <span className="ck-urg-bars" aria-hidden="true">
-                      {[0, 1, 2].map((i) => <i key={i} style={{ background: i < u.bars ? (on ? u.color : '#8a8a8a') : 'currentColor', opacity: i < u.bars ? 1 : 0.2 }} />)}
-                    </span>
-                    {u.label}
-                  </button>
-                )
-              })}
-            </div>
+        <motion.div className="ck-modal" role="dialog" aria-modal="true"
+          aria-label={creating ? 'New checklist' : `Edit ${title}`} {...pop}>
+          <div className="ck-modal-head">
+            <div className="ck-eye">{creating ? 'New checklist' : 'Checklist'}</div>
+            <button type="button" className="ck-x" onClick={onClose} aria-label="Close"><IconClose /></button>
           </div>
 
-          <div className="ck-field">
-            <span className="ck-label">
-              Objectives
-              {p.total > 0 && <span className="ck-label-c">{p.done}/{p.total} · {pct}%</span>}
-            </span>
-            {p.total > 0 && (
-              <div className="ck-bar ck-bar--wide" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Checklist progress">
-                <i style={{ width: pct + '%', background: pct === 100 ? '#2FB893' : urgencyOf(urgency).color }} />
-              </div>
-            )}
-            <div className="ck-objs">
-              {items.length === 0 && <div className="ck-empty-sm">Nothing yet. Add your first objective below.</div>}
-              {items.map((i) => {
-                const st = timeState(i)
-                return (
+          <div className="ck-modal-body">
+            <label className="ck-field">
+              <span className="ck-label">Title</span>
+              <input ref={titleRef} className="ck-input ck-input--title" value={title}
+                onChange={(e) => setTitle(e.target.value)} placeholder="Interview week sprint" aria-label="Checklist title" />
+            </label>
+
+            <div className="ck-field">
+              <span className="ck-label">Add an objective</span>
+              {/* compose field sits above the list, so new objectives land under the cursor */}
+              <ObjectiveInput onAdd={addObjective} />
+            </div>
+
+            <div className="ck-field">
+              {p.total > 0 && (
+                <div className="ck-bar ck-bar--wide" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Checklist progress">
+                  <i style={{ width: pct + '%', background: pct === 100 ? '#2FB893' : '#e6e6e6' }} />
+                </div>
+              )}
+              <div className="ck-objs">
+                {items.length === 0 && <div className="ck-empty-sm">Nothing yet. Add your first objective above.</div>}
+                {items.map((i) => (
                   <div className={'ck-obj' + (i.done ? ' is-done' : '')} key={i.id}>
                     <Tick done={i.done} onClick={() => toggle(i.id)} label={`Complete ${i.text}`} />
+                    {/* time first, then the objective */}
+                    <TimeChip item={i} state={timeState(i)} />
                     <span className="ck-obj-t">{i.text}</span>
-                    <TimeChip item={i} state={st} />
+                    <button type="button" className={'ck-obj-u' + (i.urgent ? ' is-on' : '')}
+                      onClick={() => toggleUrgent(i.id)} aria-pressed={!!i.urgent}
+                      aria-label={i.urgent ? `Mark ${i.text} normal` : `Mark ${i.text} urgent`}
+                      title={i.urgent ? 'Urgent — click for normal' : 'Mark urgent'}>
+                      <span className="ck-urgmark-bars" aria-hidden="true"><i /><i /><i /></span>
+                    </button>
                     <button type="button" className="ck-obj-x" onClick={() => drop(i.id)} aria-label={`Delete ${i.text}`}>
                       <IconTrash />
                     </button>
                   </div>
-                )
-              })}
+                ))}
+              </div>
             </div>
-            <ObjectiveInput onAdd={addObjective} />
-            <p className="ck-hint">
-              Start a line with a time and it becomes a scheduled objective —
-              <code>09:00 - 10:30</code>, <code>14:00</code> or <code>9am - 10:30am</code> all work.
-            </p>
           </div>
-        </div>
 
-        <div className="ck-modal-foot">
-          {creating ? (
-            <>
-              <button type="button" className="ck-btn ck-btn--ghost" onClick={onClose}>Cancel</button>
-              <button type="button" className="ck-btn ck-btn--primary" onClick={create} disabled={!draftTitle.trim()}>
-                Create checklist
-              </button>
-            </>
-          ) : (
-            <>
-              {confirmDel ? (
-                <>
-                  <span className="ck-confirm">Delete this checklist?</span>
-                  <button type="button" className="ck-btn ck-btn--ghost" onClick={() => setConfirmDel(false)}>Keep</button>
-                  <button type="button" className="ck-btn ck-btn--danger" onClick={() => { api.removeList(list.id); onClose() }}>Delete</button>
-                </>
-              ) : (
-                <>
-                  <button type="button" className="ck-btn ck-btn--ghost ck-btn--del" onClick={() => setConfirmDel(true)}>
-                    <IconTrash /> Delete
-                  </button>
-                  <button type="button" className="ck-btn ck-btn--primary" onClick={onClose}>Done</button>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      </motion.div>
+          <div className="ck-modal-foot">
+            {creating ? (
+              <>
+                <button type="button" className="ck-btn ck-btn--ghost" onClick={onClose}>Cancel</button>
+                <button type="button" className="ck-btn ck-btn--primary" onClick={create} disabled={!draftTitle.trim()}>
+                  Create checklist
+                </button>
+              </>
+            ) : confirmDel ? (
+              <>
+                <span className="ck-confirm">Delete this checklist?</span>
+                <button type="button" className="ck-btn ck-btn--ghost" onClick={() => setConfirmDel(false)}>Keep</button>
+                <button type="button" className="ck-btn ck-btn--danger" onClick={() => { api.removeList(list.id); onClose() }}>Delete</button>
+              </>
+            ) : (
+              <>
+                <button type="button" className="ck-btn ck-btn--ghost ck-btn--del" onClick={() => setConfirmDel(true)}>
+                  <IconTrash /> Delete
+                </button>
+                <button type="button" className="ck-btn ck-btn--primary" onClick={onClose}>Done</button>
+              </>
+            )}
+          </div>
+        </motion.div>
       </div>
     </>,
     document.body,
@@ -386,7 +336,7 @@ export default function Checklist() {
   const [open, setOpen] = useState(null) // null | 'new' | listId
 
   const current = open && open !== 'new' ? lists.find((l) => l.id === open) : null
-  // A list deleted from another tab shouldn't leave an orphaned drawer open.
+  // A list deleted from another tab shouldn't leave an orphaned modal open.
   useEffect(() => { if (open && open !== 'new' && !current) setOpen(null) }, [open, current])
 
   useEffect(() => {
@@ -398,8 +348,8 @@ export default function Checklist() {
     return [...lists].sort((a, b) => {
       const ap = progressOf(a).complete ? 1 : 0
       const bp = progressOf(b).complete ? 1 : 0
-      if (ap !== bp) return ap - bp                                  // finished sink
-      const u = urgencyOf(b.urgency).rank - urgencyOf(a.urgency).rank // urgent float
+      if (ap !== bp) return ap - bp                        // finished sink
+      const u = urgentOpen(b) - urgentOpen(a)              // most urgent work floats
       if (u) return u
       return String(b.created || '').localeCompare(String(a.created || ''))
     })
@@ -413,7 +363,8 @@ export default function Checklist() {
             <div className="ck-eye">Board</div>
             <h1 className="cg-chrome ck-h1">Checklist</h1>
             <p className="ck-head-sub">
-              A drawing board for what has to happen. Urgent work surfaces top-left; everything else is a box.
+              A drawing board for what has to happen. Every objective carries its own
+              priority; what&rsquo;s urgent stays pinned on the right.
             </p>
           </div>
           <button type="button" className="ck-newbtn" onClick={() => setOpen('new')}>
@@ -422,19 +373,18 @@ export default function Checklist() {
         </div>
       </Reveal>
 
-      {/* The urgent rail is its own column rather than a grid cell: it is legitimately
-          taller than a checklist box, and as a cell it forced a ragged row and a
-          large void beside it. */}
       <div className="ck-layout">
-        <Reveal delay={0} className="ck-rail"><UrgentCard lists={lists} onOpen={setOpen} /></Reveal>
         <div className="ck-grid">
-          <Reveal delay={0.05}><AddTile onClick={() => setOpen('new')} /></Reveal>
+          <Reveal delay={0.04}><AddTile onClick={() => setOpen('new')} /></Reveal>
           {sorted.map((l, i) => (
-            <Reveal key={l.id} delay={0.08 + Math.min(i, 6) * 0.04}>
+            <Reveal key={l.id} delay={0.07 + Math.min(i, 6) * 0.04}>
               <ListBox list={l} onOpen={setOpen} />
             </Reveal>
           ))}
         </div>
+        {/* second in the DOM so it sits right on desktop; CSS lifts it above the
+            board on mobile, where what's urgent should be read first */}
+        <Reveal delay={0} className="ck-rail"><UrgentCard lists={lists} onOpen={setOpen} /></Reveal>
       </div>
 
       {lists.length === 0 && (
@@ -447,7 +397,7 @@ export default function Checklist() {
 
       <AnimatePresence>
         {open && (
-          <Drawer key={open} mode={open === 'new' ? 'new' : 'edit'} list={current} api={api}
+          <Modal key={open} mode={open === 'new' ? 'new' : 'edit'} list={current} api={api}
             onClose={() => setOpen(null)} />
         )}
       </AnimatePresence>

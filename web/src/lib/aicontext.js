@@ -6,7 +6,7 @@ import { readingStats, activityLast7, activityRange } from './progress.js'
 import { scheduleInfo } from './schedule.js'
 import { LLD_TOTAL_DAYS } from './lld.js'
 import { getChecklists, checklistSummary, progressOf } from './checklists.js'
-import { fmtRange } from './timephrase.js'
+import { fmtRange12 } from './timephrase.js'
 import { daysToPlacement } from './ai.js'
 
 function streak() {
@@ -69,13 +69,13 @@ export function buildAiContext() {
     const p = progressOf(l)
     return {
       title: l.title,
-      urgency: l.urgency,
+      urgent: l.items.filter((i) => !i.done && i.urgent).length,
       done: p.done,
       total: p.total,
       openTimed: l.items.filter((i) => !i.done && i.start != null)
         .sort((a, b) => a.start - b.start)
         .slice(0, 5)
-        .map((i) => `${fmtRange(i.start, i.end)} ${i.text}`),
+        .map((i) => `${fmtRange12(i.start, i.end)} ${i.text}${i.urgent ? ' [urgent]' : ''}`),
     }
   })
 

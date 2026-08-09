@@ -12,7 +12,7 @@ import { LLD_TOTAL_DAYS } from '../lib/lld.js'
 import SwipeDeck from '../components/SwipeDeck.jsx'
 import AiPanel from '../components/AiPanel.jsx'
 import { CHECKLIST_KEY, checklistSummary, urgentFeed } from '../lib/checklists.js'
-import { fmtRange, timeState, nowMins } from '../lib/timephrase.js'
+import { to12h, timeState, nowMins } from '../lib/timephrase.js'
 
 const H = new Date().getHours()
 const GREET = H < 12 ? 'Good morning' : H < 18 ? 'Good afternoon' : 'Good evening'
@@ -246,8 +246,8 @@ function ChecklistCard() {
           <span className="flex items-center gap-2 text-[13px] text-[#a1a1a1]">
             <span className="ck-home-ico" aria-hidden="true"><IconChecklist /></span>Checklist
           </span>
-          {sum.criticalOpen > 0
-            ? <span className="ck-home-crit">{sum.criticalOpen} critical</span>
+          {sum.urgentOpen > 0
+            ? <span className="ck-home-crit">{sum.urgentOpen} urgent</span>
             : <span className="text-[12.5px] text-[#737373]">{sum.active} active</span>}
         </div>
 
@@ -271,10 +271,10 @@ function ChecklistCard() {
               return (
                 <div className="ck-home-row" key={r.item.id}>
                   <span className="ck-home-pip" style={{ background: r.urgency.color }} aria-hidden="true" />
-                  <span className="ck-home-t">{r.item.text}</span>
                   {r.item.start != null && (
-                    <span className={'ck-time is-' + (st || 'later')}>{fmtRange(r.item.start, r.item.end)}</span>
+                    <span className={'ck-t is-' + (st || 'later')}>{to12h(r.item.start)}</span>
                   )}
+                  <span className="ck-home-t">{r.item.text}</span>
                 </div>
               )
             })}
@@ -482,9 +482,14 @@ export default function CryptgenBento() {
                 key: 'tracks',
                 label: 'Tracks',
                 node: (
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    {tracks.map((t, i) => <Reveal key={t.key} delay={0.05 + i * 0.04}><TrackCard t={t} /></Reveal>)}
-                  </div>
+                  // Wrapped in a card of its own so both deck pages share one border and
+                  // one height — swiping used to resize the whole page under the cursor.
+                  // The six tiles stretch to fill it.
+                  <Card variant="soft" className="cg-w deck-tracks">
+                    <div className="deck-tracks-grid">
+                      {tracks.map((t, i) => <Reveal key={t.key} delay={0.05 + i * 0.04}><TrackCard t={t} /></Reveal>)}
+                    </div>
+                  </Card>
                 ),
               },
               { key: 'ai', label: 'AI review', node: <AiPanel /> },

@@ -75,9 +75,9 @@ ${ctx.tracks.map((t) => `- ${t.name}: ${t.pct == null ? 'n/a' : t.pct + '%'} com
 
 CHECKLISTS
 - ${ctx.checklists.lists} checklists, ${ctx.checklists.active} still active
-- ${ctx.checklists.openItems} objectives open, ${ctx.checklists.criticalOpen} of them on a CRITICAL-urgency checklist
+- ${ctx.checklists.openItems} objectives open, ${ctx.checklists.urgentOpen} of them marked urgent
 - ${ctx.checklists.doneToday} objectives ticked off today
-${ctx.checklistDetail.length ? ctx.checklistDetail.map((c) => `- "${c.title}" [${c.urgency}] ${c.done}/${c.total} done${c.openTimed.length ? `, scheduled today: ${c.openTimed.join(', ')}` : ''}`).join('\n') : '- (no checklists created yet)'}
+${ctx.checklistDetail.length ? ctx.checklistDetail.map((c) => `- "${c.title}" ${c.done}/${c.total} done${c.urgent ? `, ${c.urgent} urgent` : ''}${c.openTimed.length ? `, scheduled today: ${c.openTimed.join(', ')}` : ''}`).join('\n') : '- (no checklists created yet)'}
 
 Return the JSON report now, following this schema:
 ${SCHEMA_TEXT}`

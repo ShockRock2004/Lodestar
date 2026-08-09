@@ -8,23 +8,28 @@ import { urgencyOf } from './urgency.js'
 export const CHECKLIST_KEY = 'checklists'
 
 /*  shape
-    { id, title, urgency, created, items: [
-        { id, text, done, doneAt, start, end }   // start/end = minutes since midnight, or null
-    ] }                                                                              */
+    { id, title, created, items: [
+        { id, text, done, doneAt, start, end, urgent }
+    ] }
+    start/end are minutes since midnight (or null). `urgent` is per objective —
+    a checklist has no priority of its own.                                          */
 
-export const newItem = (line) => {
+export const newItem = (line, urgent = false) => {
   const p = parseObjective(line)
   if (!p) return null
-  return { id: uid(), text: p.text, done: false, doneAt: null, start: p.start, end: p.end }
+  return { id: uid(), text: p.text, done: false, doneAt: null, start: p.start, end: p.end, urgent: !!urgent }
 }
 
-export const newChecklist = (title, urgency = 'normal', lines = []) => ({
+export const newChecklist = (title, lines = []) => ({
   id: uid(),
   title: String(title || '').trim() || 'Untitled checklist',
-  urgency,
   created: new Date().toISOString(),
-  items: lines.map(newItem).filter(Boolean),
+  items: lines.map((l) => newItem(l)).filter(Boolean),
 })
+
+// How many open objectives on a list are urgent — the board shows this instead of
+// the checklist-level badge that used to live here.
+export const urgentOpen = (list) => (list.items || []).filter((i) => !i.done && i.urgent).length
 
 export const progressOf = (list) => {
   const total = list.items.length
@@ -38,7 +43,7 @@ export function useChecklists() {
   const [lists, setLists] = useStore(CHECKLIST_KEY, [])
 
   const addList = useCallback((rec) => {
-    const list = { ...newChecklist(rec.title, rec.urgency), ...rec, id: rec.id || uid() }
+    const list = { ...newChecklist(rec.title), ...rec, id: rec.id || uid() }
     setLists((xs) => [list, ...xs])
     return list
   }, [setLists])
@@ -49,10 +54,12 @@ export function useChecklists() {
 
   const removeList = useCallback((id) => setLists((xs) => xs.filter((l) => l.id !== id)), [setLists])
 
-  const addItem = useCallback((listId, line) => {
-    const it = newItem(line)
+  // Prepends: the compose field sits at the top of the dialog, so a new objective
+  // has to appear directly beneath it rather than at the far end of the list.
+  const addItem = useCallback((listId, line, urgent = false) => {
+    const it = newItem(line, urgent)
     if (!it) return
-    setLists((xs) => xs.map((l) => (l.id === listId ? { ...l, items: [...l.items, it] } : l)))
+    setLists((xs) => xs.map((l) => (l.id === listId ? { ...l, items: [it, ...l.items] } : l)))
   }, [setLists])
 
   const updateItem = useCallback((listId, itemId, patch) => {
@@ -82,12 +89,11 @@ export function useChecklists() {
 export function urgentFeed(lists, now = nowMins()) {
   const out = []
   ;(lists || []).forEach((l) => {
-    const u = urgencyOf(l.urgency)
     l.items.forEach((i) => {
       if (i.done) return
       const state = timeState(i, now)
       out.push({
-        listId: l.id, listTitle: l.title, urgency: u, item: i, state,
+        listId: l.id, listTitle: l.title, urgency: urgencyOf(i.urgent), item: i, state,
         overdue: state === 'past',
       })
     })
@@ -114,10 +120,9 @@ export function urgentFeed(lists, now = nowMins()) {
 export function checklistSummary(lists) {
   const all = lists || []
   const active = all.filter((l) => !progressOf(l).complete)
-  let openItems = 0, criticalOpen = 0, doneToday = 0, totalItems = 0, doneItems = 0
+  let openItems = 0, urgentOpenItems = 0, doneToday = 0, totalItems = 0, doneItems = 0
   const today = todayISO()
   all.forEach((l) => {
-    const u = urgencyOf(l.urgency)
     l.items.forEach((i) => {
       totalItems++
       if (i.done) {
@@ -125,12 +130,12 @@ export function checklistSummary(lists) {
         if (String(i.doneAt || '').slice(0, 10) === today) doneToday++
       } else {
         openItems++
-        if (u.rank === 3) criticalOpen++
+        if (i.urgent) urgentOpenItems++
       }
     })
   })
   return {
-    lists: all.length, active: active.length, openItems, criticalOpen, doneToday,
+    lists: all.length, active: active.length, openItems, urgentOpen: urgentOpenItems, doneToday,
     totalItems, doneItems, pct: totalItems ? Math.round((doneItems / totalItems) * 100) : 0,
   }
 }

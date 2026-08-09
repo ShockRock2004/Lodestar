@@ -6,21 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 // keyboard users, so swiping is never the only way to reach a page.
 export default function SwipeDeck({ pages, label = 'Card deck', className = '' }) {
   const ref = useRef(null)
-  const pageRefs = useRef([])
   const [idx, setIdx] = useState(0)
-  const [heights, setHeights] = useState([])
-
-  // Each page keeps its natural height and the viewport animates to the active one,
-  // so the six short track cards are not stretched to the AI panel's height.
-  useEffect(() => {
-    const els = pageRefs.current.filter(Boolean)
-    if (!els.length) return
-    const measure = () => setHeights(els.map((el) => el.offsetHeight))
-    measure()
-    const ro = new ResizeObserver(measure)
-    els.forEach((el) => ro.observe(el))
-    return () => ro.disconnect()
-  }, [pages.length])
 
   const onScroll = useCallback(() => {
     const el = ref.current
@@ -54,11 +40,12 @@ export default function SwipeDeck({ pages, label = 'Card deck', className = '' }
 
   return (
     <div className={'deck ' + className} role="group" aria-roledescription="carousel" aria-label={label}>
+      {/* Every page is stretched to the tallest one, so swiping never resizes the
+          page under the cursor. Each page fills that height with its own card. */}
       <div ref={ref} className="deck-viewport" onScroll={onScroll} onKeyDown={onKeyDown} tabIndex={0}
-        aria-live="polite" style={heights[idx] ? { height: heights[idx] } : undefined}>
+        aria-live="polite">
         {pages.map((p, i) => (
-          <section key={p.key} ref={(el) => { pageRefs.current[i] = el }} className="deck-page"
-            aria-roledescription="slide"
+          <section key={p.key} className="deck-page" aria-roledescription="slide"
             aria-label={`${p.label} — ${i + 1} of ${pages.length}`} aria-hidden={i !== idx}>
             {p.node}
           </section>
