@@ -362,14 +362,8 @@ export default function Checklist() {
           <div>
             <div className="ck-eye">Board</div>
             <h1 className="cg-chrome ck-h1">Checklist</h1>
-            <p className="ck-head-sub">
-              A drawing board for what has to happen. Every objective carries its own
-              priority; what&rsquo;s urgent stays pinned on the right.
-            </p>
+            <p className="ck-head-sub">Create daily objectives and reminders</p>
           </div>
-          <button type="button" className="ck-newbtn" onClick={() => setOpen('new')}>
-            <IconPlus /> New checklist
-          </button>
         </div>
       </Reveal>
 

@@ -59,6 +59,8 @@ Your job is honest, specific, constructive criticism. Rules:
 - Be terse. Every sentence must carry information. No preamble, no sign-off.
 - You are given every track that is actually being studied. Do not ask about, infer, or
   penalise anything that is not listed — in particular, never mention a missing subject.
+- A track marked NOT STARTED has a future start date. It is on plan, not behind. Never
+  list it as slipping, never call its 0% a gap, and never tell them to start it early.
 - Reply with JSON only, matching the schema exactly. No markdown fences.`
 
 function userPrompt(ctx) {

@@ -53,32 +53,31 @@
 }
 .deck-page > * { width: 100%; flex: 1; min-height: 0; }
 
-/* the six track tiles, inside a card that matches the AI card's border */
-.deck-tracks { display: flex; padding: 16px; }
+/* The six track tiles, inside a card that matches the AI card's border.
+   The tiles themselves are left completely alone — same 30px type, same 210px
+   glyph, same 160px floor as when they sat directly on the page — so wrapping them
+   changes nothing about how a tile looks. The grid mirrors the original gap-5. */
+/* The wrapper's own padding is what makes a tile narrower than it was standing on
+   the page (437px -> 420px), which was enough to wrap "Low Level Design" onto two
+   lines. Trim the padding and give the body back the difference on the right, so
+   the title fits on one line exactly as deployed. The glyph is untouched. */
+.deck-tracks { display: flex; padding: 12px; }
+.deck-tracks-grid .track2-body { padding-right: 150px; }
+/* The wrapper contributes the border, not a second fill. Both it and every tile are
+   [data-glass="soft"] — a translucent white wash — so stacking them lifted each tile
+   about twice as far off black and read as washed out against the deployed look. */
+.home-page .deck-tracks { background: transparent !important; }
 .deck-tracks-grid {
   flex: 1; min-height: 0; min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-auto-rows: 1fr;   /* the tiles resize to fill the shared height */
-  gap: 14px;
+  grid-auto-rows: minmax(160px, 1fr);   /* never below the tile's natural height */
+  gap: 20px;
 }
 @media (min-width: 640px) { .deck-tracks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .deck-tracks-grid { grid-auto-rows: minmax(132px, 1fr); } }
 .deck-tracks-grid > * { min-height: 0; min-width: 0; display: flex; }
 .deck-tracks-grid > * > * { width: 100%; min-width: 0; }
-.deck-tracks-grid .track2 { min-height: 0; }
-
-/* The track glyph is sized for a full-width tile (210px, bleeding 34px off the
-   right edge). Inside the deck card each tile is roughly a third narrower, where
-   that size reads as a chopped-off shape rather than a bleed. */
-.deck-tracks-grid .track2-logo { width: 146px; height: 146px; right: -20px !important; opacity: .5; }
-.deck-tracks-grid .track2-logo svg { width: 146px; height: 146px; }
-.deck-tracks-grid .track2-body { padding: 16px 112px 16px 20px; }
-.deck-tracks-grid .track2-name { font-size: 15px; }
-@media (max-width: 640px) {
-  .deck-tracks-grid .track2-logo { width: 120px; height: 120px; right: -14px !important; }
-  .deck-tracks-grid .track2-logo svg { width: 120px; height: 120px; }
-  .deck-tracks-grid .track2-body { padding: 14px 94px 14px 18px; }
-}
 
 .deck-bar { display: flex; align-items: center; gap: 10px; padding: 0 2px; }
 
@@ -434,21 +433,9 @@
 /* ============================================================
    4. CHECKLIST PAGE
    ============================================================ */
-.ck-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.ck-head { display: flex; align-items: flex-end; gap: 20px; }
 .ck-h1 { margin-top: 4px; font-size: 30px; font-weight: 700; letter-spacing: -.025em; line-height: 1.05; }
 .ck-head-sub { margin-top: 7px; font-size: 13.5px; line-height: 1.55; color: var(--ck-ink-3); max-width: 56ch; }
-.ck-newbtn {
-  display: inline-flex; align-items: center; gap: 7px; flex: none;
-  border-radius: 12px; border: 1px solid rgba(0, 0, 0, .18);
-  background: linear-gradient(#f0f0f0, #c8c8c8);
-  color: #0b0b0b;
-  padding: 11px 17px;
-  font-size: 13.5px; font-weight: 700;
-  cursor: pointer;
-  transition: filter .16s ease, transform .16s ease;
-}
-.ck-newbtn svg { width: 16px; height: 16px; }
-.ck-newbtn:hover { filter: brightness(1.06); transform: translateY(-1px); }
 
 /* board + right rail. The rail sticks under the navbar so what is urgent stays in
    view while the board scrolls. */
@@ -535,8 +522,8 @@
   flex: 1; min-width: 0; min-height: 0; margin: 0;
   display: flex; align-items: center; justify-content: center;
   text-align: center;
-  font-size: 16.5px; font-weight: 700; color: #fff;
-  letter-spacing: -.015em; line-height: 1.3;
+  font-size: 21px; font-weight: 700; color: #fff;
+  letter-spacing: -.02em; line-height: 1.22;
 }
 .ck-box-title > span {
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
@@ -811,8 +798,7 @@
   .ck-grid { grid-template-columns: 1fr; gap: 14px; }
   .ck-grid > * { min-height: 216px; }
   .ck-h1 { font-size: 25px; }
-  .ck-newbtn { width: 100%; justify-content: center; }
-  .ck-modal-wrap { padding: 12px; place-items: end center; }
+    .ck-modal-wrap { padding: 12px; place-items: end center; }
   .ck-modal { width: 100%; max-height: 88vh; }
   .deck-label { display: none; }
 }

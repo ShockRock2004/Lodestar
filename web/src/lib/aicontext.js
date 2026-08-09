@@ -3,7 +3,7 @@
 // numbers so the model is never asked to do arithmetic.
 import { getStore, todayISO } from './store.js'
 import { readingStats, activityLast7, activityRange } from './progress.js'
-import { scheduleInfo } from './schedule.js'
+import { scheduleInfo, SCHEDULE, fmtDate } from './schedule.js'
 import { LLD_TOTAL_DAYS } from './lld.js'
 import { getChecklists, checklistSummary, progressOf } from './checklists.js'
 import { fmtRange12 } from './timephrase.js'
@@ -22,6 +22,14 @@ function streak() {
 // planned. Its home card and its own page are untouched — this only scopes the review.
 export const AI_EXCLUDED = new Set(['ML · Quant'])
 
+// A scheduled track whose start date is still in the future has not begun. Its 0%
+// is the plan working as intended, not a failure, so it must never be scored or
+// criticised — Low Level Design does not start until 2026-10-01.
+export const notStartedYet = (trackId) => {
+  const cfg = SCHEDULE[trackId]
+  return !!cfg && cfg.start > todayISO()
+}
+
 export function buildTracks() {
   const sd = readingStats('system-design')
   const ma = readingStats('math')
@@ -39,7 +47,9 @@ export function buildTracks() {
     { name: 'CS Core', pct: cs.pct, state: `${cs.done} of ${cs.total || 46} topics`, pace: 'self-paced', behind: 0 },
     { name: 'System Design', pct: sd.pct, state: `day ${sd.currentDay} of ${sd.total}`, pace: sd.behind ? `${sd.behind}d behind` : 'on track', behind: sd.behind || 0 },
     { name: 'Full Stack', pct: odin.pct, state: `${odin.done} of ${odin.total} items`, pace: '4-month plan', behind: 0 },
-    { name: 'Low Level Design', pct: lld.pct, state: `${lld.doneDays || 0} of ${LLD_TOTAL_DAYS} days`, pace: lldBehind ? `${lldBehind}d behind` : 'on track', behind: lldBehind },
+    notStartedYet('lld')
+      ? { name: 'Low Level Design', pct: null, state: `NOT STARTED — scheduled to begin ${fmtDate(SCHEDULE.lld.start)}`, pace: 'not due to have begun', behind: 0, pending: true }
+      : { name: 'Low Level Design', pct: lld.pct, state: `${lld.doneDays || 0} of ${LLD_TOTAL_DAYS} days`, pace: lldBehind ? `${lldBehind}d behind` : 'on track', behind: lldBehind },
   ]
 }
 
