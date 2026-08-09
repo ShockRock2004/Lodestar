@@ -5,8 +5,12 @@ import { getStore } from './store.js'
 // progress, CS Core, Full Stack, the quant bank, goals & settings) is stored as a
 // jsonb blob in the `app_state` KV table. col:dsa / col:contests are excluded because
 // they already sync through their own dedicated tables via useCloud().
+//
+// ai:keys is excluded because it holds provider API keys entered in this browser.
+// Mirroring them would write live credentials into a table any holder of the anon
+// key can read; they are meant to stay on the device that entered them.
 const NS = 'studyos:'
-const EXCLUDE = new Set(['col:dsa', 'col:contests'])
+const EXCLUDE = new Set(['col:dsa', 'col:contests', 'ai:keys'])
 const syncable = (key) => !!key && !EXCLUDE.has(key)
 
 const timers = {}
