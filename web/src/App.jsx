@@ -12,6 +12,7 @@ import Search from './pages/Search.jsx'
 import Odin from './pages/Odin.jsx'
 import Lld from './pages/Lld.jsx'
 import DsaPlan from './pages/DsaPlan.jsx'
+import Checklist from './pages/Checklist.jsx'
 import { migrateLegacy } from './lib/progress.js'
 import { startCloudSync } from './lib/cloudsync.js'
 
@@ -82,6 +83,7 @@ export default function App() {
           <Route path="search" element={<Search />} />
           <Route path="full-stack" element={<Odin />} />
           <Route path="lld" element={<Lld />} />
+          <Route path="checklist" element={<Checklist />} />
         </Route>
       </Routes>
       </MotionConfig>

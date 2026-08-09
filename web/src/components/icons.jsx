@@ -21,6 +21,13 @@ export const IconFlame = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1.2 3.6 4.8 4.8 4.8 9.2A4.8 4.8 0 0 1 7.2 11C7.2 9 8 7.8 8.8 7 9 9.5 12 8.5 12 2Z" /></svg>
 )
 export const IconFlag = () => S(<path d="M5 21V4h9l-1.5 3L14 10H5" />)
+export const IconChecklist = () => S(<><path d="M4 6.5 5.7 8.2 9 5" /><path d="M4 13.5 5.7 15.2 9 12" /><path d="M4 20.2 5.7 21.9 9 18.7" /><path d="M12.5 6.6H21M12.5 13.6H21M12.5 20.6H20" /></>, { strokeWidth: 1.8 })
+export const IconSpark = () => S(<><path d="M12 3.2 13.7 8.9 19.4 10.6 13.7 12.3 12 18 10.3 12.3 4.6 10.6 10.3 8.9Z" /><path d="M18.4 3.4l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7Z" /></>, { strokeWidth: 1.6 })
+export const IconClock = () => S(<><circle cx="12" cy="12" r="8.5" /><path d="M12 7.4V12l3 1.8" /></>, { strokeWidth: 1.8 })
+export const IconTrash = () => S(<><path d="M4.5 6.5h15M9.5 6.5V4.8h5v1.7" /><path d="M6.7 6.5 7.6 19a1 1 0 0 0 1 .9h6.8a1 1 0 0 0 1-.9l.9-12.5" /></>, { strokeWidth: 1.7 })
+export const IconRefresh = () => S(<><path d="M20 12a8 8 0 1 1-2.6-5.9" /><path d="M20 4.2V9h-4.8" /></>, { strokeWidth: 1.9 })
+export const IconAlert = () => S(<><path d="M12 8.4v4.4" /><circle cx="12" cy="16.4" r="0.9" fill="currentColor" stroke="none" /><path d="M10.3 3.9 2.6 17.6A1.9 1.9 0 0 0 4.3 20.5h15.4a1.9 1.9 0 0 0 1.7-2.9L13.7 3.9a1.9 1.9 0 0 0-3.4 0Z" /></>, { strokeWidth: 1.7 })
+export const IconClose = () => S(<path d="M6 6l12 12M18 6L6 18" />, { strokeWidth: 2.1 })
 
 // section glyphs
 export const IconChart = () => S(<><path d="M4 20V13M10 20V6M16 20v-9" /><path d="M3 20h18" /></>)

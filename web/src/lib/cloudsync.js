@@ -12,6 +12,13 @@ const syncable = (key) => !!key && !EXCLUDE.has(key)
 const timers = {}
 let started = false
 
+// Resolves once the initial cloud pull has landed (or immediately when there is no
+// backend). Anything that reads a one-shot snapshot of the stores — the AI review
+// builds one — must await this, or it can analyse the pre-sync local state and
+// report figures that disagree with what the page renders a moment later.
+let markReady
+export const cloudReady = new Promise((resolve) => { markReady = resolve })
+
 function push(key) {
   if (!supabase || !syncable(key)) return
   const value = getStore(key, null)
@@ -31,11 +38,11 @@ function onLocalWrite(e) {
 // local-only keys, then keep pushing local writes. No-op without a configured client
 // or before the schema exists (the load simply errors and we stay offline-first).
 export async function startCloudSync() {
-  if (started || !supabase) return
+  if (started || !supabase) { markReady(); return }
   started = true
   try {
     const { data, error } = await supabase.from('app_state').select('key,value')
-    if (error) { console.warn('[cloudsync] load skipped:', error.message); return }
+    if (error) { console.warn('[cloudsync] load skipped:', error.message); markReady(); return }
     const cloudKeys = new Set()
     ;(data || []).forEach((row) => {
       cloudKeys.add(row.key)
@@ -51,5 +58,7 @@ export async function startCloudSync() {
     window.addEventListener('studyos-store', onLocalWrite)
   } catch (e) {
     console.warn('[cloudsync] init error', e)
+  } finally {
+    markReady()
   }
 }

@@ -8,6 +8,7 @@ import './styles/glass.css'
 import './styles/theme.css'
 import './styles/app.css'
 import './styles/cryptgen.css'
+import './styles/checklist.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
