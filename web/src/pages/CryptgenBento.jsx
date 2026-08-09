@@ -4,11 +4,15 @@ import { Card } from '../components/ui/card.jsx'
 import Reveal from '../components/Reveal.jsx'
 import Modal from '../components/Modal.jsx'
 import CalendarCard from '../components/CalendarCard.jsx'
-import { useReading, useCollection, activityLast7, activityRange, entriesForDate, readingStats, activitySectionLevels } from '../lib/progress.js'
+import { useReading, useCollection, activityRange, entriesForDate, readingStats, activitySectionLevels } from '../lib/progress.js'
 import { getStore, useStore, todayISO } from '../lib/store.js'
-import { FlameFire, IconChevron, IconDsa, IconSys, IconCs, IconMl, IconOdin, IconLld } from '../components/icons.jsx'
+import { IconChevron, IconDsa, IconSys, IconCs, IconMl, IconOdin, IconLld, IconChecklist } from '../components/icons.jsx'
 import { scheduleInfo, fmtDate } from '../lib/schedule.js'
 import { LLD_TOTAL_DAYS } from '../lib/lld.js'
+import SwipeDeck from '../components/SwipeDeck.jsx'
+import AiPanel from '../components/AiPanel.jsx'
+import { CHECKLIST_KEY, checklistSummary, urgentFeed } from '../lib/checklists.js'
+import { fmtRange, timeState, nowMins } from '../lib/timephrase.js'
 
 const H = new Date().getHours()
 const GREET = H < 12 ? 'Good morning' : H < 18 ? 'Good afternoon' : 'Good evening'
@@ -227,28 +231,58 @@ function TrackCard({ t }) {
 }
 
 /* ---------- right rail ---------- */
-function Momentum() {
-  const a = activityLast7()
-  const mx = Math.max(1, ...a.raw)
+// Replaces the old Momentum sparkline: the week's bar chart already exists on the
+// Overview page, whereas nothing surfaced the checklist board from home.
+function ChecklistCard() {
+  const [lists] = useStore(CHECKLIST_KEY, [])
+  const sum = checklistSummary(lists)
+  const feed = urgentFeed(lists).slice(0, 3)
+  const now = nowMins()
+
   return (
-    <Card variant="soft" className="cg-w flex flex-col p-6">
-      <div className="flex items-center justify-between">
-        <span className="text-[13px] text-[#a1a1a1]">Momentum</span>
-        <span className="flex items-center gap-1.5"><FlameFire size={16} /><span className="text-[13px] font-semibold text-white">{globalStreak()}d</span></span>
-      </div>
-      <div className="mt-1 text-[26px] font-bold tracking-tight text-white">{a.total}<span className="ml-1.5 text-[13px] font-normal text-[#737373]">this week</span></div>
-      <div className="mt-4 flex h-[56px] items-end gap-2">
-        {a.raw.map((v, i) => {
-          const today = i === a.raw.length - 1
-          return (
-            <div key={i} className="flex flex-1 flex-col items-center gap-2">
-              <div className="flex w-full flex-1 items-end"><i className="block w-full rounded-md" style={{ height: Math.max(8, (v / mx) * 100) + '%', background: today ? '#fafafa' : v ? '#3f3f3f' : '#1c1c1c' }} /></div>
-              <span className={'text-[10px] ' + (today ? 'text-white' : 'text-[#5f5f5f]')}>{a.labels[i]}</span>
-            </div>
-          )
-        })}
-      </div>
-    </Card>
+    <Link to="/checklist" className="ck-home-link block">
+      <Card variant="soft" className="cg-w ck-home flex flex-col p-6">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-2 text-[13px] text-[#a1a1a1]">
+            <span className="ck-home-ico" aria-hidden="true"><IconChecklist /></span>Checklist
+          </span>
+          {sum.criticalOpen > 0
+            ? <span className="ck-home-crit">{sum.criticalOpen} critical</span>
+            : <span className="text-[12.5px] text-[#737373]">{sum.active} active</span>}
+        </div>
+
+        <div className="mt-1 text-[26px] font-bold tracking-tight text-white">
+          {sum.openItems}<span className="ml-1.5 text-[13px] font-normal text-[#737373]">open {sum.openItems === 1 ? 'objective' : 'objectives'}</span>
+        </div>
+
+        <div className="ck-bar ck-bar--wide mt-3" role="progressbar" aria-valuenow={sum.pct} aria-valuemin={0} aria-valuemax={100} aria-label="Checklist completion">
+          <i style={{ width: sum.pct + '%', background: sum.pct === 100 ? '#2FB893' : '#e6e6e6' }} />
+        </div>
+        <div className="mt-1.5 flex items-center justify-between text-[11.5px] text-[#6a6a6a]">
+          <span>{sum.doneItems} of {sum.totalItems} done</span>
+          <span>{sum.doneToday} today</span>
+        </div>
+
+        <div className="ck-home-feed">
+          {feed.length === 0
+            ? <div className="ck-empty-sm">No objectives yet — open the board to add one.</div>
+            : feed.map((r) => {
+              const st = timeState(r.item, now)
+              return (
+                <div className="ck-home-row" key={r.item.id}>
+                  <span className="ck-home-pip" style={{ background: r.urgency.color }} aria-hidden="true" />
+                  <span className="ck-home-t">{r.item.text}</span>
+                  {r.item.start != null && (
+                    <span className={'ck-time is-' + (st || 'later')}>{fmtRange(r.item.start, r.item.end)}</span>
+                  )}
+                </div>
+              )
+            })}
+        </div>
+
+        <span className="ck-home-cta">Open board <IconChevron /></span>
+      </Card>
+    </Link>
   )
 }
 
@@ -440,12 +474,25 @@ export default function CryptgenBento() {
       <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="flex flex-col gap-5 lg:col-span-2">
           <Reveal delay={0}><ResumeBand resume={resume} /></Reveal>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            {tracks.map((t, i) => <Reveal key={t.key} delay={0.05 + i * 0.04}><TrackCard t={t} /></Reveal>)}
-          </div>
+          {/* One swipeable deck: all six tracks on page 1, the AI review on page 2. */}
+          <SwipeDeck
+            label="Tracks and AI review"
+            pages={[
+              {
+                key: 'tracks',
+                label: 'Tracks',
+                node: (
+                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    {tracks.map((t, i) => <Reveal key={t.key} delay={0.05 + i * 0.04}><TrackCard t={t} /></Reveal>)}
+                  </div>
+                ),
+              },
+              { key: 'ai', label: 'AI review', node: <AiPanel /> },
+            ]}
+          />
         </div>
         <div className="flex flex-col gap-5">
-          <Reveal delay={0.06}><Momentum /></Reveal>
+          <Reveal delay={0.06}><ChecklistCard /></Reveal>
           <Reveal delay={0.1} className="flex min-h-0 flex-1 flex-col"><Calendar /></Reveal>
         </div>
       </div>
