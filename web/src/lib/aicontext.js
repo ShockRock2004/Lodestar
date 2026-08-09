@@ -17,6 +17,11 @@ function streak() {
   return s
 }
 
+// Tracks the reviewer must ignore. ML · Quant is not being studied, so counting it
+// would drag every average down and invite criticism about a track that was never
+// planned. Its home card and its own page are untouched — this only scopes the review.
+export const AI_EXCLUDED = new Set(['ML · Quant'])
+
 export function buildTracks() {
   const sd = readingStats('system-design')
   const ma = readingStats('math')
@@ -39,23 +44,21 @@ export function buildTracks() {
 }
 
 export function buildAiContext() {
-  const tracks = buildTracks()
+  const tracks = buildTracks().filter((t) => !AI_EXCLUDED.has(t.name))
   const week = activityLast7()
   const lists = getChecklists()
   const sum = checklistSummary(lists)
 
   const sd = readingStats('system-design')
-  const ma = readingStats('math')
-  const ho = readingStats('handson')
   const dsaToday = getStore('col:dsa', []).find((x) => x.date === todayISO())
   const doneToday = (planId) => {
     const st = getStore(`read:${planId}`, { done: {} })
     return Object.values(st.done || {}).some((ts) => String(ts).slice(0, 10) === todayISO())
   }
+  // 'math' and 'handson' are the ML · Quant reading plans, so they are left out here
+  // for the same reason the track is: they are not part of the plan being reviewed.
   const targets = [
     doneToday('system-design') || sd.finished,
-    doneToday('math') || ma.finished,
-    doneToday('handson') || ho.finished,
     !!dsaToday,
   ]
 

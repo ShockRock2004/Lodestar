@@ -101,16 +101,15 @@
    2. SHARED PRIMITIVES (urgency, time, progress, tick)
    ============================================================ */
 
-/* urgency = bars + word + hue, never hue alone */
+/* urgency = bars + word + hue, never hue alone. Deliberately unboxed: as a filled
+   pill, repeated once per box, it fought the titles for attention. */
 .ck-urg {
-  display: inline-flex; align-items: center; gap: 7px; flex: none;
-  border: 1px solid; border-radius: 999px;
-  padding: 4px 10px 4px 8px;
-  font-size: 11px; font-weight: 700;
-  letter-spacing: .04em; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase;
   line-height: 1;
 }
-.ck-urg--sm { padding: 4px 6px; gap: 0; }
+.ck-urg--sm { gap: 0; }
 .ck-urg-bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 11px; }
 .ck-urg-bars i { display: block; width: 3px; border-radius: 1px; }
 .ck-urg-bars i:nth-child(1) { height: 5px; }
@@ -138,6 +137,27 @@
   animation: ck-pulse 1.8s ease-in-out infinite;
 }
 @keyframes ck-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+/* flat time, for the board. Tinted type instead of a filled chip. */
+.ck-t {
+  flex: none; display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11.5px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ck-ink-4);
+}
+.ck-t.is-now { color: #fafafa; }
+.ck-t.is-soon { color: #ff7d29; }
+.ck-t.is-past { color: #ff5252; }
+.ck-t-live { width: 5px; height: 5px; border-radius: 999px; background: currentColor; animation: ck-pulse 1.8s ease-in-out infinite; }
+
+.ck-flag {
+  flex: none;
+  font-size: 9.5px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.ck-flag.is-late { color: #ff5252; }
+.ck-flag.is-now { color: #fafafa; }
+.ck-quiet { flex: none; font-size: 11.5px; color: var(--ck-ink-5); }
 
 .ck-bar {
   flex: 1; min-width: 0; height: 5px; border-radius: 999px;
@@ -327,6 +347,40 @@
 .ai-foot svg { width: 13px; height: 13px; }
 .ai-foot:hover { color: #eaeaea; gap: 8px; }
 
+/* the ask-first state: no request goes out until this is pressed */
+.ai-ask {
+  flex: 1; min-height: 260px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; text-align: center; padding: 20px 16px;
+}
+.ai-ask-orb {
+  width: 62px; height: 62px;
+  display: grid; place-items: center;
+  border-radius: 999px;
+  background: var(--cg-grad-orb, radial-gradient(60% 60% at 35% 25%, #f6f6f6 0%, #bdbdbd 35%, #4a4a4a 72%, #141414 100%));
+  color: #0b0b0b;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .5), 0 0 0 1px rgba(255, 255, 255, .12), 0 10px 30px rgba(0, 0, 0, .5);
+}
+.ai-ask-orb svg { width: 30px; height: 30px; }
+.ai-ask-t { margin-top: 4px; font-size: 17px; font-weight: 700; letter-spacing: -.015em; color: #fff; }
+.ai-ask-d { margin: 0; max-width: 46ch; font-size: 13px; line-height: 1.62; color: var(--ck-ink-3); }
+.ai-ask-btn {
+  margin-top: 8px;
+  display: inline-flex; align-items: center; gap: 9px;
+  border-radius: 999px; border: 1px solid rgba(0, 0, 0, .2);
+  background: linear-gradient(#f4f4f4, #c6c6c6);
+  color: #0b0b0b;
+  padding: 12px 24px;
+  font-family: inherit; font-size: 14px; font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .45);
+  transition: filter .16s ease, transform .16s ease;
+}
+.ai-ask-btn svg { width: 17px; height: 17px; }
+.ai-ask-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.ai-ask-btn:active { transform: translateY(0); }
+.ai-ask-btn:focus-visible { outline: 2px solid #7a7a7a; outline-offset: 3px; }
+
 /* loading + error */
 .ai-skel { display: flex; flex-direction: column; gap: 12px; flex: 1; padding: 6px 0; }
 .ai-skel-line { display: block; height: 13px; border-radius: 7px; background: linear-gradient(90deg, #141414 0%, #1e1e1e 50%, #141414 100%); background-size: 200% 100%; animation: ck-shimmer 1.5s ease-in-out infinite; }
@@ -389,7 +443,8 @@
   /* `start`, not `stretch`, so a tall box never pads its neighbours with dead space */
   align-items: start;
 }
-.ck-grid > * { display: flex; min-height: 254px; min-width: 0; }
+/* 254px left a lot of dead air once a box showed one "next" line instead of three */
+.ck-grid > * { display: flex; min-height: 206px; min-width: 0; }
 .ck-grid > * > * { width: 100%; min-width: 0; }
 
 @media (max-width: 1040px) {
@@ -422,25 +477,14 @@
 }
 .ck-urow:hover { background: rgba(255, 255, 255, .04); }
 .ck-urow:focus-visible { outline: 2px solid #4a4a4a; outline-offset: -2px; }
-.ck-urow-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-/* two lines rather than one: an objective is a sentence, and a hard nowrap was
-   cutting most of them off after four words */
+/* one row = one line: [urgency bars] [time] [objective · source] [flag] */
+.ck-urow-time { flex: none; width: 38px; }
 .ck-urow-t {
+  flex: 1; min-width: 0;
   font-size: 12.5px; color: #e6e6e6; line-height: 1.35;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  overflow: hidden; overflow-wrap: anywhere;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.ck-urow-m { display: flex; align-items: baseline; gap: 5px; min-width: 0; font-size: 11px; color: var(--ck-ink-5); }
-.ck-urow-src { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ck-overdue, .ck-nowtag, .ck-soontag {
-  flex: none;
-  font-size: 9.5px; font-weight: 700;
-  letter-spacing: .07em; text-transform: uppercase;
-  border-radius: 4px; padding: 1px 4px;
-}
-.ck-overdue { color: #ff5252; background: rgba(255, 82, 82, .12); }
-.ck-nowtag { color: #0b0b0b; background: #ededed; }
-.ck-soontag { color: #ff7d29; background: rgba(255, 125, 41, .13); }
+.ck-urow-src { color: var(--ck-ink-5); }
 
 /* --- a checklist box --- */
 .ck-box-btn { display: block; width: 100%; min-width: 0; text-align: left; border: 0; background: none; padding: 0; cursor: pointer; }
@@ -461,10 +505,11 @@
   letter-spacing: -.015em; line-height: 1.25;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.ck-box-items { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 7px; }
-.ck-box-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.ck-box-dot { width: 4px; height: 4px; flex: none; border-radius: 999px; background: #4d4d4d; }
-.ck-box-item-t { flex: 1; min-width: 0; font-size: 12.5px; color: var(--ck-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* one quiet "what's next" line instead of a list of chipped objectives */
+.ck-box-next { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.ck-box-next-k { font-size: 9.5px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--ck-ink-5); }
+.ck-box-next-t { display: flex; align-items: baseline; gap: 8px; width: 100%; min-width: 0; }
+.ck-box-next-x { flex: 1; min-width: 0; font-size: 13px; color: var(--ck-ink-2); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ck-done-note { font-size: 12.5px; font-weight: 600; color: var(--ck-ok); }
 
 .ck-box-foot { display: flex; align-items: center; gap: 10px; }
@@ -508,19 +553,27 @@
 /* ============================================================
    5. LEFT DRAWER
    ============================================================ */
-/* above the fixed navbar (z-60), which the drawer is a modal over */
-.ck-scrim { position: fixed; inset: 0; z-index: 120; background: rgba(0, 0, 0, .62); backdrop-filter: blur(2px); }
-.ck-drawer {
-  position: fixed; left: 0; top: 0; bottom: 0; z-index: 121;
-  width: min(438px, 100vw);
-  display: flex; flex-direction: column;
-  background: linear-gradient(180deg, #161616 0%, #0c0c0c 42%, #0a0a0a 100%);
-  border-right: 1px solid #333;
-  box-shadow: 24px 0 70px rgba(0, 0, 0, .7);
+/* above the fixed navbar (z-60), which this floats over */
+.ck-scrim { position: fixed; inset: 0; z-index: 120; background: rgba(0, 0, 0, .66); backdrop-filter: blur(3px); }
+.ck-modal-wrap {
+  position: fixed; inset: 0; z-index: 121;
+  display: grid; place-items: center;
+  padding: 24px 16px;
+  overflow-y: auto;
 }
-.ck-drawer-head {
+.ck-modal {
+  width: min(560px, 100%);
+  max-height: min(84vh, 780px);
+  display: flex; flex-direction: column;
+  border-radius: 20px;
+  border: 1px solid #333;
+  background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 40%, #0b0b0b 100%);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, .78), inset 0 1px 0 rgba(255, 255, 255, .06);
+  overflow: hidden;
+}
+.ck-modal-head {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 18px 20px; border-bottom: 1px solid var(--ck-line);
+  padding: 16px 20px; border-bottom: 1px solid var(--ck-line);
 }
 .ck-x {
   width: 30px; height: 30px; flex: none;
@@ -532,9 +585,9 @@
 .ck-x svg { width: 15px; height: 15px; }
 .ck-x:hover { color: #fff; border-color: #454545; }
 
-.ck-drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 22px; }
-.ck-drawer-body::-webkit-scrollbar { width: 8px; }
-.ck-drawer-body::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 999px; }
+.ck-modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 22px; }
+.ck-modal-body::-webkit-scrollbar { width: 8px; }
+.ck-modal-body::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 999px; }
 
 .ck-field { display: flex; flex-direction: column; gap: 9px; }
 .ck-label {
@@ -632,9 +685,9 @@
   border-radius: 4px; padding: 1px 5px;
 }
 
-.ck-drawer-foot {
+.ck-modal-foot {
   display: flex; align-items: center; gap: 9px;
-  padding: 15px 20px;
+  padding: 14px 20px;
   border-top: 1px solid var(--ck-line);
   background: rgba(0, 0, 0, .3);
 }
@@ -716,7 +769,8 @@
   .ck-grid > * { min-height: 216px; }
   .ck-h1 { font-size: 25px; }
   .ck-newbtn { width: 100%; justify-content: center; }
-  .ck-drawer { width: 100vw; }
+  .ck-modal-wrap { padding: 12px; place-items: end center; }
+  .ck-modal { width: 100%; max-height: 88vh; }
   .deck-label { display: none; }
 }
 

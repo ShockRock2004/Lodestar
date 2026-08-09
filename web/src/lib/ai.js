@@ -57,6 +57,8 @@ Your job is honest, specific, constructive criticism. Rules:
 - Placement season starts 2026-12-01. Treat that as a hard deadline and measure everything against it.
 - If a track is behind schedule, name it and say what that costs by December.
 - Be terse. Every sentence must carry information. No preamble, no sign-off.
+- You are given every track that is actually being studied. Do not ask about, infer, or
+  penalise anything that is not listed — in particular, never mention a missing subject.
 - Reply with JSON only, matching the schema exactly. No markdown fences.`
 
 function userPrompt(ctx) {

@@ -7,6 +7,16 @@ import { buildAiContext, localStats } from '../lib/aicontext.js'
 import { cloudReady } from '../lib/cloudsync.js'
 import { urgencyOf } from '../lib/urgency.js'
 
+function relTime(ts) {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000))
+  if (s < 60) return 'just now'
+  const m = Math.round(s / 60)
+  if (m < 60) return `${m}m ago`
+  const h = Math.round(m / 60)
+  if (h < 24) return `${h}h ago`
+  return `${Math.round(h / 24)}d ago`
+}
+
 const TRAJ = {
   ahead: { label: 'Ahead of pace', color: '#2FB893' },
   'on-track': { label: 'On track', color: '#d4d4d4' },
@@ -100,12 +110,18 @@ export default function AiPanel() {
     }
   }, [])
 
-  // Re-analyses on every mount, i.e. every page load / refresh, while the cached
-  // report stays on screen so the panel is never blank (stale-while-revalidate).
+  // Deliberately NOT run on mount. The report is only regenerated when asked for,
+  // and the last one stays cached until then — an automatic call on every page load
+  // burned quota and gave a slightly different verdict each refresh.
+  useEffect(() => () => { if (abort.current) abort.current.abort() }, [])
+
+  // Keep the local figures live even while the report is older than they are.
   useEffect(() => {
-    run()
-    return () => { if (abort.current) abort.current.abort() }
-  }, [run])
+    const sync = () => setStats(localStats(buildAiContext()))
+    window.addEventListener('studyos-store', sync)
+    cloudReady.then(sync)
+    return () => window.removeEventListener('studyos-store', sync)
+  }, [])
 
   const traj = report ? (TRAJ[report.trajectory] || TRAJ.slipping) : TRAJ.slipping
   const noKeys = !hasAnyKey()
@@ -117,21 +133,27 @@ export default function AiPanel() {
         <div className="ai-head-tx">
           <div className="ai-eye">AI review</div>
           <div className="ai-head-sub">
-            {loading ? 'Analysing your whole system…'
-              : meta ? `${meta.provider} · ${meta.model}`
-                : 'Not yet run'}
+            {loading ? 'Reading your tracks and checklists…'
+              : meta ? `${meta.provider} · ${meta.model}${meta.at ? ` · asked ${relTime(meta.at)}` : ''}`
+                : 'Nothing asked yet'}
           </div>
         </div>
-        <button type="button" className={'ai-refresh' + (loading ? ' is-busy' : '')} onClick={run}
-          disabled={loading} aria-label="Re-run analysis" title="Re-run analysis">
-          <IconRefresh />
-        </button>
+        {report && (
+          <button type="button" className={'ai-refresh' + (loading ? ' is-busy' : '')} onClick={run}
+            disabled={loading} aria-label="Ask again" title="Ask again">
+            <IconRefresh />
+          </button>
+        )}
       </div>
 
       {/* deterministic figures — computed locally, never from the model */}
       <div className="ai-stats">
         <div className="ai-stat"><b>{stats.daysLeft}</b><span>days to Dec 1</span></div>
-        <div className="ai-stat"><b>{stats.overall}%</b><span>overall</span></div>
+        {/* labelled "tracked" because ML · Quant is excluded from the review, so this
+            legitimately differs from the all-tracks figure in the page header */}
+        <div className="ai-stat" title="Average across the tracks under review (excludes ML · Quant)">
+          <b>{stats.overall}%</b><span>overall · tracked</span>
+        </div>
         <div className="ai-stat"><b>{stats.streak}</b><span>day streak</span></div>
         <div className="ai-stat"><b>{stats.week}</b><span>done this week</span></div>
         <div className="ai-stat">
@@ -142,6 +164,21 @@ export default function AiPanel() {
       </div>
 
       {!report && loading && <Skeleton />}
+
+      {!report && !loading && !err && (
+        <div className="ai-ask">
+          <span className="ai-ask-orb" aria-hidden="true"><IconSpark /></span>
+          <div className="ai-ask-t">Ask AI for a review</div>
+          <p className="ai-ask-d">
+            It reads every track you&rsquo;re studying, your checklists and the {stats.daysLeft} days
+            left before {PLACEMENT_ISO}, then tells you plainly where you&rsquo;re lagging.
+            Nothing is sent until you ask.
+          </p>
+          <button type="button" className="ai-ask-btn" onClick={run}>
+            <IconSpark /> Ask AI
+          </button>
+        </div>
+      )}
 
       {!report && !loading && err && (
         <div className="ai-error">
