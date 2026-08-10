@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { getStore, useStore, uid, todayISO } from './store.js'
-import { parseObjective, timeState, nowMins } from './timephrase.js'
+import { parseObjective, timeState, nowMins, dayRelation } from './timephrase.js'
 import { urgencyOf } from './urgency.js'
 
 // Checklists live under one studyos key, so cloudsync.js mirrors them to Supabase
@@ -54,12 +54,11 @@ export function useChecklists() {
 
   const removeList = useCallback((id) => setLists((xs) => xs.filter((l) => l.id !== id)), [setLists])
 
-  // Prepends: the compose field sits at the top of the dialog, so a new objective
-  // has to appear directly beneath it rather than at the far end of the list.
+  // Appends: objectives read in the order they were entered.
   const addItem = useCallback((listId, line, urgent = false) => {
     const it = newItem(line, urgent)
     if (!it) return
-    setLists((xs) => xs.map((l) => (l.id === listId ? { ...l, items: [it, ...l.items] } : l)))
+    setLists((xs) => xs.map((l) => (l.id === listId ? { ...l, items: [...l.items, it] } : l)))
   }, [setLists])
 
   const updateItem = useCallback((listId, itemId, patch) => {
@@ -88,10 +87,12 @@ export function useChecklists() {
 // else by urgency then start time. Overdue timed items are surfaced, not hidden.
 export function urgentFeed(lists, now = nowMins()) {
   const out = []
+  const today = todayISO()
   ;(lists || []).forEach((l) => {
+    const rel = dayRelation(l.date, l.dateEnd, today)
     l.items.forEach((i) => {
       if (i.done) return
-      const state = timeState(i, now)
+      const state = timeState(i, now, rel)
       out.push({
         listId: l.id, listTitle: l.title, urgency: urgencyOf(i.urgent), item: i, state,
         overdue: state === 'past',
