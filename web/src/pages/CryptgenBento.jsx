@@ -12,7 +12,7 @@ import { LLD_TOTAL_DAYS } from '../lib/lld.js'
 import SwipeDeck from '../components/SwipeDeck.jsx'
 import AiPanel from '../components/AiPanel.jsx'
 import { CHECKLIST_KEY, checklistSummary, urgentFeed } from '../lib/checklists.js'
-import { to12h, timeState, nowMins } from '../lib/timephrase.js'
+import { to12h } from '../lib/timephrase.js'
 
 const H = new Date().getHours()
 const GREET = H < 12 ? 'Good morning' : H < 18 ? 'Good afternoon' : 'Good evening'
@@ -237,7 +237,6 @@ function ChecklistCard() {
   const [lists] = useStore(CHECKLIST_KEY, [])
   const sum = checklistSummary(lists)
   const feed = urgentFeed(lists).slice(0, 3)
-  const now = nowMins()
 
   return (
     <Link to="/checklist" className="ck-home-link block">
@@ -266,18 +265,15 @@ function ChecklistCard() {
         <div className="ck-home-feed">
           {feed.length === 0
             ? <div className="ck-empty-sm">No objectives yet — open the board to add one.</div>
-            : feed.map((r) => {
-              const st = timeState(r.item, now)
-              return (
-                <div className="ck-home-row" key={r.item.id}>
-                  <span className="ck-home-pip" style={{ background: r.urgency.color }} aria-hidden="true" />
-                  {r.item.start != null && (
-                    <span className={'ck-t is-' + (st || 'later')}>{to12h(r.item.start)}</span>
-                  )}
-                  <span className="ck-home-t">{r.item.text}</span>
-                </div>
-              )
-            })}
+            : feed.map((r) => (
+              <div className="ck-home-row" key={r.item.id}>
+                <span className="ck-home-pip" style={{ background: r.urgency.color }} aria-hidden="true" />
+                {r.item.start != null && (
+                  <span className={'ck-t is-' + (r.state || 'later')}>{to12h(r.item.start)}</span>
+                )}
+                <span className="ck-home-t">{r.item.text}</span>
+              </div>
+            ))}
         </div>
 
         <span className="ck-home-cta">Open board <IconChevron /></span>

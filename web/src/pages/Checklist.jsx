@@ -3,10 +3,26 @@ import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Card } from '../components/ui/card.jsx'
 import Reveal from '../components/Reveal.jsx'
-import { IconPlus, IconTrash, IconClose, IconClock, IconChecklist, IconAlert } from '../components/icons.jsx'
+import { IconPlus, IconTrash, IconClose, IconClock, IconChecklist, IconAlert, IconCalendar, IconChevron, IconBack } from '../components/icons.jsx'
 import { useChecklists, progressOf, urgentFeed, newItem, urgentOpen } from '../lib/checklists.js'
 import { urgencyOf } from '../lib/urgency.js'
-import { parseObjective, fmtRange12, to12h, timeState, nowMins } from '../lib/timephrase.js'
+import { parseObjective, fmtRange12, to12h, timeState, nowMins, dayRelation } from '../lib/timephrase.js'
+import { todayISO } from '../lib/store.js'
+
+/* ---------- date helpers: a checklist covers one day or a run of days ---------- */
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+const DOW = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
+
+const isoOf = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+const parseISO = (iso) => { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d) }
+const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate()
+
+const fmtDay = (iso) => { const d = parseISO(iso); return `${d.getDate()} ${MONTHS[d.getMonth()].slice(0, 3)}` }
+const dateLabel = (date, dateEnd) => {
+  if (!date) return 'Add date'
+  if (!dateEnd || dateEnd === date) return fmtDay(date)
+  return `${fmtDay(date)} – ${fmtDay(dateEnd)}`
+}
 
 /* ---------- shared bits ---------- */
 
@@ -65,6 +81,15 @@ function UrgentCard({ lists, onOpen }) {
   }, [])
 
   const feed = useMemo(() => urgentFeed(lists).slice(0, 6), [lists])
+  // Same day/date-range check the feed itself used to rank things — recomputed
+  // here (not baked into `feed`) purely so "now" -> "late" can flip on the
+  // per-minute tick above without waiting on a `lists` change.
+  const relByList = useMemo(() => {
+    const today = todayISO()
+    const map = new Map()
+    ;(lists || []).forEach((l) => map.set(l.id, dayRelation(l.date, l.dateEnd, today)))
+    return map
+  }, [lists])
   const now = nowMins()
 
   return (
@@ -83,7 +108,7 @@ function UrgentCard({ lists, onOpen }) {
         )}
         {/* time first, then the objective */}
         {feed.map((r) => {
-          const state = timeState(r.item, now)
+          const state = timeState(r.item, now, relByList.get(r.listId))
           return (
             <button type="button" key={r.item.id} className="ck-urow" onClick={() => onOpen(r.listId)}
               title={`${r.item.text} — ${r.listTitle}${r.item.urgent ? ' · urgent' : ''}`}
@@ -153,20 +178,17 @@ function ObjectiveInput({ onAdd }) {
           placeholder="09:00am - 10:00am Revise graphs"
           aria-label="New objective"
         />
+        <button type="button" className={'ck-urg-switch' + (urgent ? ' is-on' : '')}
+          onClick={() => setUrgent((u) => !u)} aria-pressed={urgent}
+          aria-label={urgent ? 'Mark new objective normal' : 'Mark new objective urgent'}
+          title={urgent ? 'Urgent — click for normal' : 'Mark urgent'} />
         <button type="button" className="ck-addbtn" onClick={submit} disabled={!text.trim()} aria-label="Add objective">
           <IconPlus />
         </button>
       </div>
 
-      <div className="ck-objin-meta">
-        <label className="ck-check">
-          <input type="checkbox" checked={urgent} onChange={(e) => setUrgent(e.target.checked)} />
-          <span className="ck-check-box" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M6 12l4 4 8-8" fill="none" stroke="#0b0b0b" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          </span>
-          <span className="ck-check-l">Urgent</span>
-        </label>
-        {preview && (
+      {preview && (
+        <div className="ck-objin-meta">
           <span className="ck-preview">
             {preview.start != null ? (
               <>
@@ -176,9 +198,142 @@ function ObjectiveInput({ onAdd }) {
             ) : <span className="ck-preview-k">text</span>}
             <span className="ck-preview-t">{preview.text}</span>
           </span>
-        )}
-      </div>
+        </div>
+      )}
     </div>
+  )
+}
+
+// Re-serializes a stored objective back into the typed line it parses from, so
+// editing starts from what the parser would echo, time prefix included.
+function editLineOf(item) {
+  if (item.start == null) return item.text
+  const range = item.end == null ? to12h(item.start) : `${to12h(item.start)} - ${to12h(item.end)}`
+  return `${range} ${item.text}`
+}
+
+function ObjectiveEditRow({ item, onSave, onCancel }) {
+  const [val, setVal] = useState(() => editLineOf(item))
+  const ref = useRef(null)
+  useEffect(() => { if (ref.current) { ref.current.focus(); ref.current.select() } }, [])
+  const commit = () => {
+    const v = val.trim()
+    if (v) onSave(v)
+    else onCancel()
+  }
+  return (
+    <input
+      ref={ref}
+      className="ck-input ck-input--inline"
+      value={val}
+      onChange={(e) => setVal(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') { e.preventDefault(); commit() }
+        if (e.key === 'Escape') { e.preventDefault(); onCancel() }
+      }}
+      onBlur={commit}
+      aria-label="Edit objective"
+    />
+  )
+}
+
+/* ---------- day / range picker, popped over the title bar ----------
+   Portalled to <body> and positioned in fixed coordinates off the trigger
+   button's own rect — the modal clips overflow for its rounded corners, which
+   would otherwise cut the calendar off (same trap the left drawer hit). */
+function CalendarPopover({ anchorRef, value, onChange, onClose }) {
+  const wrapRef = useRef(null)
+  const [pos, setPos] = useState(null)
+  const base = value.start ? parseISO(value.start) : new Date()
+  const [view, setView] = useState(new Date(base.getFullYear(), base.getMonth(), 1))
+  // The anchor for a range is whatever was clicked FIRST in this picking session —
+  // not whatever the list's date already was, or clicking a second day would
+  // instantly (and confusingly) pair it with the pre-existing date.
+  const [pending, setPending] = useState(null)
+
+  useEffect(() => {
+    const CAL_HALF = 133, MARGIN = 12
+    const reposition = () => {
+      const el = anchorRef.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      const left = Math.max(CAL_HALF + MARGIN, Math.min(window.innerWidth - CAL_HALF - MARGIN, r.left + r.width / 2))
+      setPos({ top: r.bottom + 8, left })
+    }
+    reposition()
+    window.addEventListener('resize', reposition)
+    window.addEventListener('scroll', reposition, true)
+    return () => { window.removeEventListener('resize', reposition); window.removeEventListener('scroll', reposition, true) }
+  }, [anchorRef])
+
+  useEffect(() => {
+    const onDown = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target) && e.target !== anchorRef.current && !anchorRef.current?.contains(e.target)) onClose() }
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', onDown)
+    window.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDown); window.removeEventListener('keydown', onKey) }
+  }, [onClose, anchorRef])
+
+  const y = view.getFullYear(), m = view.getMonth()
+  const startOffset = new Date(y, m, 1).getDay()
+  const total = daysInMonth(y, m)
+  const todayIso = todayISO()
+
+  const cells = []
+  const prevTotal = daysInMonth(y, m - 1 < 0 ? 11 : m - 1)
+  for (let i = 0; i < startOffset; i++) {
+    const d = prevTotal - startOffset + 1 + i
+    const mm = m === 0 ? 11 : m - 1
+    const yy = m === 0 ? y - 1 : y
+    cells.push({ iso: isoOf(yy, mm, d), d, out: true })
+  }
+  for (let d = 1; d <= total; d++) cells.push({ iso: isoOf(y, m, d), d, out: false })
+  while (cells.length < 42) {
+    const d = cells.length - startOffset - total + 1
+    const mm = m === 11 ? 0 : m + 1
+    const yy = m === 11 ? y + 1 : y
+    cells.push({ iso: isoOf(yy, mm, d), d, out: true })
+  }
+
+  // One click sets a day. A second, different click stretches it into a range
+  // off that same click; the click after a completed range starts a fresh pick.
+  const pick = (iso) => {
+    if (!pending) { setPending(iso); onChange(iso, null); return }
+    if (iso !== pending) onChange(iso < pending ? iso : pending, iso < pending ? pending : iso)
+    else onChange(iso, null)
+    setPending(null)
+  }
+  const inRange = (iso) => value.start && value.end && iso > value.start && iso < value.end
+
+  if (!pos) return null
+
+  return createPortal(
+    <div className="ck-cal" ref={wrapRef} role="dialog" aria-label="Choose date"
+      style={{ top: pos.top, left: pos.left }}>
+      <div className="ck-cal-head">
+        <button type="button" className="ck-cal-nav" onClick={() => setView(new Date(y, m - 1, 1))} aria-label="Previous month"><IconBack /></button>
+        <span className="ck-cal-title">{MONTHS[m]} {y}</span>
+        <button type="button" className="ck-cal-nav" onClick={() => setView(new Date(y, m + 1, 1))} aria-label="Next month"><IconChevron /></button>
+      </div>
+      <div className="ck-cal-dow">{DOW.map((d) => <span key={d}>{d}</span>)}</div>
+      <div className="ck-cal-grid">
+        {cells.map((c) => (
+          <button type="button" key={c.iso}
+            className={'ck-cal-day' + (c.out ? ' is-out' : '') + (c.iso === todayIso ? ' is-today' : '')
+              + (c.iso === value.start ? ' is-start' : '') + (c.iso === value.end ? ' is-end' : '')
+              + (inRange(c.iso) ? ' is-in-range' : '')}
+            onClick={() => pick(c.iso)}>
+            {c.d}
+          </button>
+        ))}
+      </div>
+      <div className="ck-cal-foot">
+        <button type="button" className="ck-cal-link" onClick={() => onChange(todayISO(), null)}>Today</button>
+        <button type="button" className="ck-cal-link" onClick={() => onChange(null, null)}>Clear</button>
+        <button type="button" className="ck-cal-link ck-cal-link--done" onClick={onClose}>Done</button>
+      </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -186,31 +341,49 @@ function Modal({ mode, list, api, onClose }) {
   const rm = useReducedMotion()
   const [draftTitle, setDraftTitle] = useState('')
   const [draftItems, setDraftItems] = useState([])
+  const [draftDate, setDraftDate] = useState(todayISO())
+  const [draftDateEnd, setDraftDateEnd] = useState(null)
   const [confirmDel, setConfirmDel] = useState(false)
+  const [editId, setEditId] = useState(null)
+  const [calOpen, setCalOpen] = useState(false)
   const titleRef = useRef(null)
+  const dateBtnRef = useRef(null)
   const creating = mode === 'new'
 
   useEffect(() => {
-    if (creating) { setDraftTitle(''); setDraftItems([]) }
+    if (creating) { setDraftTitle(''); setDraftItems([]); setDraftDate(todayISO()); setDraftDateEnd(null) }
     setConfirmDel(false)
-    const t = setTimeout(() => { if (titleRef.current) titleRef.current.focus() }, 240)
-    return () => clearTimeout(t)
+    setEditId(null)
+    setCalOpen(false)
+    // Only a fresh checklist wants the cursor dropped into its title — opening one
+    // that already exists shouldn't put anything into edit mode until it's clicked.
+    if (creating) {
+      const t = setTimeout(() => { if (titleRef.current) titleRef.current.focus() }, 240)
+      return () => clearTimeout(t)
+    }
   }, [mode, list && list.id]) // eslint-disable-line
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    const onKey = (e) => { if (e.key === 'Escape' && !calOpen) onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, calOpen])
 
   const title = creating ? draftTitle : (list ? list.title : '')
   const items = creating ? draftItems : (list ? list.items : [])
+  const date = creating ? draftDate : (list ? list.date : null)
+  const dateEnd = creating ? draftDateEnd : (list ? list.dateEnd : null)
+  const dayRel = dayRelation(date, dateEnd, todayISO())
   const p = { done: items.filter((i) => i.done).length, total: items.length }
   const pct = p.total ? Math.round((p.done / p.total) * 100) : 0
 
   const setTitle = (v) => (creating ? setDraftTitle(v) : api.updateList(list.id, { title: v }))
+  const setDates = (s, e) => {
+    if (creating) { setDraftDate(s); setDraftDateEnd(e) }
+    else api.updateList(list.id, { date: s, dateEnd: e })
+  }
   const addObjective = (line, urgent) => {
-    if (creating) { const it = newItem(line, urgent); if (it) setDraftItems((xs) => [it, ...xs]) }
+    if (creating) { const it = newItem(line, urgent); if (it) setDraftItems((xs) => [...xs, it]) }
     else api.addItem(list.id, line, urgent)
   }
   const toggle = (id) => {
@@ -225,11 +398,19 @@ function Modal({ mode, list, api, onClose }) {
     if (creating) setDraftItems((xs) => xs.filter((i) => i.id !== id))
     else api.removeItem(list.id, id)
   }
+  const editObjective = (id, line) => {
+    const parsed = parseObjective(line)
+    if (!parsed) return
+    const patch = { text: parsed.text, start: parsed.start, end: parsed.end }
+    if (creating) setDraftItems((xs) => xs.map((i) => (i.id === id ? { ...i, ...patch } : i)))
+    else api.updateItem(list.id, id, patch)
+    setEditId(null)
+  }
 
   const create = () => {
     const t = draftTitle.trim()
     if (!t) return
-    api.addList({ title: t, items: draftItems, created: new Date().toISOString() })
+    api.addList({ title: t, items: draftItems, date: draftDate, dateEnd: draftDateEnd, created: new Date().toISOString() })
     onClose()
   }
 
@@ -253,16 +434,26 @@ function Modal({ mode, list, api, onClose }) {
         <motion.div className="ck-modal" role="dialog" aria-modal="true"
           aria-label={creating ? 'New checklist' : `Edit ${title}`} {...pop}>
           <div className="ck-modal-head">
-            <div className="ck-eye">{creating ? 'New checklist' : 'Checklist'}</div>
             <button type="button" className="ck-x" onClick={onClose} aria-label="Close"><IconClose /></button>
           </div>
 
           <div className="ck-modal-body">
-            <label className="ck-field">
-              <span className="ck-label">Title</span>
-              <input ref={titleRef} className="ck-input ck-input--title" value={title}
-                onChange={(e) => setTitle(e.target.value)} placeholder="Interview week sprint" aria-label="Checklist title" />
-            </label>
+            <div className="ck-modal-title">
+              {/* Looks like a headline until it's clicked — no auto-focus here on an
+                  existing checklist, so opening one to look never starts editing it. */}
+              <input ref={titleRef} className="ck-title-input" value={title}
+                onChange={(e) => setTitle(e.target.value)} placeholder="Untitled checklist" aria-label="Checklist title" />
+              <div className="ck-datepick">
+                <button ref={dateBtnRef} type="button" className={'ck-datebtn' + (calOpen ? ' is-open' : '')}
+                  onClick={() => setCalOpen((v) => !v)} aria-expanded={calOpen} aria-label="Choose date">
+                  <IconCalendar /><span>{dateLabel(date, dateEnd)}</span>
+                </button>
+                {calOpen && (
+                  <CalendarPopover anchorRef={dateBtnRef} value={{ start: date, end: dateEnd }}
+                    onChange={(s, e) => setDates(s, e)} onClose={() => setCalOpen(false)} />
+                )}
+              </div>
+            </div>
 
             <div className="ck-field">
               <span className="ck-label">Add an objective</span>
@@ -279,20 +470,26 @@ function Modal({ mode, list, api, onClose }) {
               <div className="ck-objs">
                 {items.length === 0 && <div className="ck-empty-sm">Nothing yet. Add your first objective above.</div>}
                 {items.map((i) => (
-                  <div className={'ck-obj' + (i.done ? ' is-done' : '')} key={i.id}>
-                    <Tick done={i.done} onClick={() => toggle(i.id)} label={`Complete ${i.text}`} />
-                    {/* time first, then the objective */}
-                    <TimeChip item={i} state={timeState(i)} />
-                    <span className="ck-obj-t">{i.text}</span>
-                    <button type="button" className={'ck-obj-u' + (i.urgent ? ' is-on' : '')}
-                      onClick={() => toggleUrgent(i.id)} aria-pressed={!!i.urgent}
-                      aria-label={i.urgent ? `Mark ${i.text} normal` : `Mark ${i.text} urgent`}
-                      title={i.urgent ? 'Urgent — click for normal' : 'Mark urgent'}>
-                      <span className="ck-urgmark-bars" aria-hidden="true"><i /><i /><i /></span>
-                    </button>
-                    <button type="button" className="ck-obj-x" onClick={() => drop(i.id)} aria-label={`Delete ${i.text}`}>
-                      <IconTrash />
-                    </button>
+                  <div className={'ck-obj' + (i.done ? ' is-done' : '') + (editId === i.id ? ' is-editing' : '')} key={i.id}>
+                    {editId === i.id ? (
+                      <ObjectiveEditRow item={i} onSave={(line) => editObjective(i.id, line)} onCancel={() => setEditId(null)} />
+                    ) : (
+                      <>
+                        <Tick done={i.done} onClick={() => toggle(i.id)} label={`Complete ${i.text}`} />
+                        {/* time first, then the objective */}
+                        <TimeChip item={i} state={timeState(i, undefined, dayRel)} />
+                        <button type="button" className="ck-obj-t ck-obj-t--btn" onClick={() => setEditId(i.id)} aria-label={`Edit ${i.text}`}>
+                          {i.text}
+                        </button>
+                        <button type="button" className={'ck-urg-switch' + (i.urgent ? ' is-on' : '')}
+                          onClick={() => toggleUrgent(i.id)} aria-pressed={!!i.urgent}
+                          aria-label={i.urgent ? `Mark ${i.text} normal` : `Mark ${i.text} urgent`}
+                          title={i.urgent ? 'Urgent — click for normal' : 'Mark urgent'} />
+                        <button type="button" className="ck-obj-x" onClick={() => drop(i.id)} aria-label={`Delete ${i.text}`}>
+                          <IconTrash />
+                        </button>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

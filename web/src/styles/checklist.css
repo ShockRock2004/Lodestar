@@ -591,8 +591,8 @@
   overflow: hidden;
 }
 .ck-modal-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 16px 20px; border-bottom: 1px solid var(--ck-line);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 14px 14px 0;
 }
 .ck-x {
   width: 30px; height: 30px; flex: none;
@@ -604,9 +604,85 @@
 .ck-x svg { width: 15px; height: 15px; }
 .ck-x:hover { color: #fff; border-color: #454545; }
 
-.ck-modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 22px; }
+.ck-modal-body { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 20px 20px; display: flex; flex-direction: column; gap: 22px; }
 .ck-modal-body::-webkit-scrollbar { width: 8px; }
 .ck-modal-body::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 999px; }
+
+/* --- title bar: big centred headline that only looks editable once you touch it --- */
+.ck-modal-title { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 4px 4px 6px; }
+.ck-title-input {
+  width: 100%; text-align: center;
+  background: transparent; border: 1px solid transparent; border-radius: 10px;
+  padding: 8px 14px;
+  font-family: inherit; font-size: 22px; font-weight: 800; letter-spacing: -.015em; color: #fff;
+  outline: none;
+  transition: background .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.ck-title-input::placeholder { color: #5a5a5a; }
+.ck-title-input:hover { background: rgba(255, 255, 255, .03); border-color: #333; }
+.ck-title-input:focus { background: rgba(255, 255, 255, .04); border-color: rgba(255, 255, 255, .34); box-shadow: 0 0 0 3px rgba(255, 255, 255, .06); }
+
+.ck-datepick { position: relative; }
+.ck-datebtn {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--ck-line-2); background: rgba(255, 255, 255, .025);
+  color: var(--ck-ink-2); border-radius: 999px; padding: 6px 13px 6px 11px;
+  font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: .01em;
+  cursor: pointer; transition: border-color .16s, background .16s, color .16s;
+}
+.ck-datebtn svg { width: 14px; height: 14px; }
+.ck-datebtn:hover, .ck-datebtn.is-open { color: #fff; border-color: #4d4d4d; background: rgba(255, 255, 255, .06); }
+
+/* --- custom day / range calendar, popped under the date button ---
+   Portalled to <body> and placed with `top`/`left` in fixed coordinates
+   (set inline), so the modal's own overflow:hidden can't clip it. */
+.ck-cal {
+  position: fixed; transform: translateX(-50%);
+  z-index: 130; width: 266px;
+  background: linear-gradient(180deg, #1c1c1c 0%, #101010 100%);
+  border: 1px solid #333; border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .6);
+  padding: 12px;
+}
+.ck-cal-head { display: flex; align-items: center; justify-content: space-between; padding: 2px 2px 10px; }
+.ck-cal-title { font-size: 12.5px; font-weight: 700; color: #eee; letter-spacing: .01em; }
+.ck-cal-nav {
+  width: 26px; height: 26px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 8px; border: 1px solid var(--ck-line);
+  background: rgba(255, 255, 255, .02); color: var(--ck-ink-3);
+  cursor: pointer; transition: color .14s, border-color .14s;
+}
+.ck-cal-nav svg { width: 13px; height: 13px; }
+.ck-cal-nav:hover { color: #fff; border-color: #454545; }
+.ck-cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 2px; }
+.ck-cal-dow span { text-align: center; font-size: 9.5px; font-weight: 700; letter-spacing: .05em; color: var(--ck-ink-5); }
+.ck-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.ck-cal-day {
+  position: relative; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: 0; background: none; border-radius: 8px;
+  font-family: inherit; color: var(--ck-ink-2); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background .12s ease, color .12s ease;
+}
+.ck-cal-day:hover { background: rgba(255, 255, 255, .07); }
+.ck-cal-day.is-out { color: #3f3f3f; }
+.ck-cal-day.is-today { color: #fff; }
+.ck-cal-day.is-today::after {
+  content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+  width: 4px; height: 4px; border-radius: 999px; background: #ff7d29;
+}
+.ck-cal-day.is-in-range { background: rgba(255, 255, 255, .08); border-radius: 0; color: #fff; }
+.ck-cal-day.is-start, .ck-cal-day.is-end { background: #f0f0f0; color: #0b0b0b; border-radius: 8px; }
+.ck-cal-day.is-start:hover, .ck-cal-day.is-end:hover { background: #f0f0f0; }
+.ck-cal-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--ck-line); }
+.ck-cal-link {
+  border: 0; background: none; border-radius: 6px; padding: 5px 7px;
+  font-family: inherit; color: var(--ck-ink-3); font-size: 11.5px; font-weight: 600; cursor: pointer;
+  transition: color .14s, background .14s;
+}
+.ck-cal-link:hover { color: #fff; background: rgba(255, 255, 255, .06); }
+.ck-cal-link--done { margin-left: auto; color: #eaeaea; font-weight: 700; }
 
 .ck-field { display: flex; flex-direction: column; gap: 9px; }
 .ck-label {
@@ -627,7 +703,6 @@
 }
 .ck-input::placeholder { color: #5a5a5a; }
 .ck-input:focus { border-color: rgba(255, 255, 255, .34); box-shadow: 0 0 0 3px rgba(255, 255, 255, .06); }
-.ck-input--title { font-size: 16px; font-weight: 700; letter-spacing: -.01em; padding: 12px; }
 
 .ck-objs { display: flex; flex-direction: column; gap: 1px; }
 .ck-obj {
@@ -640,6 +715,19 @@
 .ck-obj-t { flex: 1; min-width: 0; font-size: 13px; color: #e6e6e6; line-height: 1.4; word-break: break-word; }
 .ck-obj.is-done .ck-obj-t { color: #5c5c5c; text-decoration: line-through; }
 .ck-obj.is-done .ck-time { opacity: .45; }
+/* click the text to edit it — no separate pencil icon needed */
+.ck-obj-t--btn {
+  text-align: left; border: 0; background: none; padding: 2px 4px; margin: -2px -4px;
+  border-radius: 6px; cursor: pointer;
+  transition: background .14s ease, color .14s ease;
+}
+.ck-obj-t--btn:hover { background: rgba(255, 255, 255, .05); color: #fff; }
+.ck-obj-t--btn:focus-visible { outline: 2px solid #6a6a6a; outline-offset: 1px; }
+.ck-obj.is-editing { background: rgba(255, 255, 255, .035); }
+.ck-input--inline {
+  flex: 1; min-width: 0; padding: 6px 9px;
+  font-size: 13px;
+}
 .ck-obj-x {
   flex: none; width: 26px; height: 26px;
   display: grid; place-items: center;
@@ -656,36 +744,33 @@
 .ck-objin-row { display: flex; gap: 8px; }
 .ck-objin-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
 
-/* urgent checkbox, set while composing the objective */
-.ck-check { display: inline-flex; align-items: center; gap: 8px; flex: none; cursor: pointer; user-select: none; }
-.ck-check input { position: absolute; opacity: 0; width: 0; height: 0; }
-.ck-check-box {
-  width: 17px; height: 17px; flex: none;
-  display: grid; place-items: center;
-  border-radius: 5px; border: 1px solid #4a4a4a;
-  background: transparent;
-  transition: background .14s ease, border-color .14s ease;
+/* urgent toggle — a real switch, used both inline with the compose field and
+   per objective in the list. The ascending-bars mark reads fine as a passive
+   "this is urgent" badge (see .ck-urgmark) but looked like a signal icon
+   rather than a control once it was clickable, so the interactive version
+   is a plain on/off switch instead. */
+.ck-urg-switch {
+  flex: none; width: 34px; height: 20px;
+  position: relative;
+  border-radius: 999px;
+  border: 1px solid var(--ck-line-2);
+  background: rgba(255, 255, 255, .04);
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease;
 }
-.ck-check-box svg { width: 11px; height: 11px; opacity: 0; transition: opacity .12s ease; }
-.ck-check:hover .ck-check-box { border-color: #6f6f6f; }
-.ck-check input:checked + .ck-check-box { background: #ff5252; border-color: #ff5252; }
-.ck-check input:checked + .ck-check-box svg { opacity: 1; }
-.ck-check input:focus-visible + .ck-check-box { outline: 2px solid #6a6a6a; outline-offset: 2px; }
-.ck-check-l { font-size: 12.5px; font-weight: 600; color: var(--ck-ink-2); }
-.ck-check input:checked ~ .ck-check-l { color: #ff5252; }
-
-/* per-objective urgency toggle in the list */
-.ck-obj-u {
-  flex: none; width: 26px; height: 26px;
-  display: grid; place-items: center;
-  border: 0; background: none; border-radius: 7px;
-  color: #3f3f3f; cursor: pointer;
-  transition: color .14s ease, background .14s ease;
+.ck-urg-switch::after {
+  content: '';
+  position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 999px;
+  background: #8a8a8a;
+  transition: transform .18s cubic-bezier(.22, 1, .36, 1), background .18s ease;
 }
-.ck-obj-u:hover { color: #8a8a8a; background: rgba(255, 255, 255, .05); }
-.ck-obj-u.is-on { color: #ff5252; }
-.ck-obj-u.is-on:hover { background: rgba(255, 82, 82, .1); }
-.ck-obj-u:focus-visible { outline: 2px solid #6a6a6a; outline-offset: 1px; }
+.ck-urg-switch:hover { border-color: #5a5a5a; }
+.ck-urg-switch:hover::after { background: #b0b0b0; }
+.ck-urg-switch.is-on { background: rgba(255, 82, 82, .18); border-color: rgba(255, 82, 82, .5); }
+.ck-urg-switch.is-on::after { transform: translateX(14px); background: #ff5252; }
+.ck-urg-switch.is-on:hover::after { background: #ff6b6b; }
+.ck-urg-switch:focus-visible { outline: 2px solid #6a6a6a; outline-offset: 2px; }
 .ck-addbtn {
   flex: none; width: 40px; height: 40px;
   display: grid; place-items: center;

@@ -78,10 +78,26 @@ export function parseObjective(input) {
 // Minutes since midnight, right now — used to mark an objective live/overdue.
 export const nowMins = (d = new Date()) => d.getHours() * 60 + d.getMinutes()
 
+// Where a checklist's date (or date range) sits relative to today. A clock-time
+// comparison only means something for a list dated today — a list for a future
+// day can't be "late" no matter how early its objectives are timed, and one from
+// a past day is overdue outright, not just for however many minutes have passed
+// since midnight. Undated (legacy) lists keep the old today-only behaviour.
+export function dayRelation(date, dateEnd, today) {
+  if (!date) return 'today'
+  const end = dateEnd || date
+  if (today < date) return 'future'
+  if (today > end) return 'past'
+  return 'today'
+}
+
 // 'now' while the clock sits inside the range, 'past' once it has gone by,
-// 'soon' within the next 90 minutes, otherwise 'later'.
-export function timeState(item, now = nowMins()) {
+// 'soon' within the next 90 minutes, otherwise 'later'. `dayRel` — from
+// dayRelation() — overrides the clock comparison for a list dated off today.
+export function timeState(item, now = nowMins(), dayRel = 'today') {
   if (item.start == null) return null
+  if (dayRel === 'future') return 'later'
+  if (dayRel === 'past') return 'past'
   const end = item.end == null ? item.start : item.end
   if (now >= item.start && now <= end) return 'now'
   if (now > end) return 'past'
