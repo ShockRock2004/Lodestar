@@ -126,19 +126,16 @@
    2. SHARED PRIMITIVES (urgency, time, progress, tick)
    ============================================================ */
 
-/* urgency belongs to the objective and has two states. Bars carry the level when
-   colour cannot (greyscale, colour blindness). */
+/* urgency belongs to the objective and has two states. The same alert-triangle
+   glyph used for the toggle buttons and the rail's own header icon marks it,
+   so the word never has to carry the meaning alone (greyscale, colour blindness). */
 .ck-urgmark {
   display: inline-flex; align-items: center; gap: 6px; flex: none;
   font-size: 10px; font-weight: 700;
   letter-spacing: .09em; text-transform: uppercase;
   line-height: 1;
 }
-.ck-urgmark-bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 10px; }
-.ck-urgmark-bars i { display: block; width: 3px; border-radius: 1px; background: currentColor; }
-.ck-urgmark-bars i:nth-child(1) { height: 4px; }
-.ck-urgmark-bars i:nth-child(2) { height: 7px; }
-.ck-urgmark-bars i:nth-child(3) { height: 10px; }
+.ck-urgmark svg { width: 12px; height: 12px; }
 
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -519,16 +516,25 @@
 .ck-box-btn:hover .ck-box { transform: translateY(-2px); border-color: #3a3a3a !important; }
 /* title takes the free space and sits in the middle, progress stays at the foot */
 .ck-box-title {
-  flex: 1; min-width: 0; min-height: 0; margin: 0;
-  display: flex; align-items: center; justify-content: center;
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
   text-align: center;
+}
+.ck-box-title-t {
+  margin: 0;
   font-size: 21px; font-weight: 700; color: #fff;
   letter-spacing: -.02em; line-height: 1.22;
 }
-.ck-box-title > span {
+.ck-box-title-t > span {
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
   overflow: hidden; overflow-wrap: anywhere;
 }
+.ck-box-date {
+  display: inline-flex; align-items: center; gap: 5px; flex: none;
+  font-size: 11px; font-weight: 600; letter-spacing: .01em;
+  color: var(--ck-ink-4);
+}
+.ck-box-date svg { width: 11px; height: 11px; }
 .ck-done-note { font-size: 12.5px; font-weight: 600; color: var(--ck-ok); }
 
 .ck-box-foot { display: flex; align-items: center; gap: 10px; }
@@ -744,33 +750,43 @@
 .ck-objin-row { display: flex; gap: 8px; }
 .ck-objin-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-width: 0; }
 
-/* urgent toggle — a real switch, used both inline with the compose field and
-   per objective in the list. The ascending-bars mark reads fine as a passive
-   "this is urgent" badge (see .ck-urgmark) but looked like a signal icon
-   rather than a control once it was clickable, so the interactive version
-   is a plain on/off switch instead. */
-.ck-urg-switch {
-  flex: none; width: 34px; height: 20px;
-  position: relative;
-  border-radius: 999px;
-  border: 1px solid var(--ck-line-2);
-  background: rgba(255, 255, 255, .04);
+/* urgent toggle — an alert-triangle button (the same glyph the "Urgent &
+   upcoming" rail uses for the same meaning, see .ck-urgent-ico), sized to
+   match whatever row it sits in rather than one fixed shape everywhere. A
+   free-floating pill switch read as foreign next to the bordered, squared-off
+   input + add button; the ascending-bars mark it replaced earlier read as a
+   signal-strength icon rather than a control once it was made clickable. */
+.ck-urgbtn {
+  flex: none;
+  display: grid; place-items: center;
   cursor: pointer;
-  transition: background .18s ease, border-color .18s ease;
+  color: var(--ck-ink-3);
+  transition: color .16s ease, border-color .16s ease, background .16s ease;
 }
-.ck-urg-switch::after {
-  content: '';
-  position: absolute; top: 2px; left: 2px;
-  width: 14px; height: 14px; border-radius: 999px;
-  background: #8a8a8a;
-  transition: transform .18s cubic-bezier(.22, 1, .36, 1), background .18s ease;
+.ck-urgbtn.is-on { color: #ff5252; }
+.ck-urgbtn:focus-visible { outline: 2px solid #6a6a6a; outline-offset: 2px; }
+
+/* compose row — same height, radius and border language as the input and the
+   add button either side of it, so the three read as one control group. */
+.ck-urgbtn--lg {
+  width: 40px; height: 40px; border-radius: 10px;
+  border: 1px solid var(--ck-line-2);
+  background: rgba(255, 255, 255, .02);
 }
-.ck-urg-switch:hover { border-color: #5a5a5a; }
-.ck-urg-switch:hover::after { background: #b0b0b0; }
-.ck-urg-switch.is-on { background: rgba(255, 82, 82, .18); border-color: rgba(255, 82, 82, .5); }
-.ck-urg-switch.is-on::after { transform: translateX(14px); background: #ff5252; }
-.ck-urg-switch.is-on:hover::after { background: #ff6b6b; }
-.ck-urg-switch:focus-visible { outline: 2px solid #6a6a6a; outline-offset: 2px; }
+.ck-urgbtn--lg svg { width: 17px; height: 17px; }
+.ck-urgbtn--lg:hover { color: #d4d4d4; border-color: #4d4d4d; }
+.ck-urgbtn--lg.is-on { border-color: rgba(255, 82, 82, .4); background: rgba(255, 82, 82, .12); }
+.ck-urgbtn--lg.is-on:hover { background: rgba(255, 82, 82, .18); }
+
+/* per-objective row — same borderless icon-button language as the delete
+   button beside it. */
+.ck-urgbtn--sm {
+  width: 26px; height: 26px; border-radius: 7px;
+  border: 0; background: none;
+}
+.ck-urgbtn--sm svg { width: 14px; height: 14px; }
+.ck-urgbtn--sm:hover { color: #8a8a8a; background: rgba(255, 255, 255, .05); }
+.ck-urgbtn--sm.is-on:hover { background: rgba(255, 82, 82, .1); }
 .ck-addbtn {
   flex: none; width: 40px; height: 40px;
   display: grid; place-items: center;

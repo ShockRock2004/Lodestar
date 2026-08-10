@@ -33,7 +33,7 @@ function UrgentMark({ on, withLabel = false }) {
   const u = urgencyOf(true)
   return (
     <span className="ck-urgmark" style={{ color: u.color }} title="Urgent">
-      <span className="ck-urgmark-bars" aria-hidden="true"><i /><i /><i /></span>
+      <IconAlert />
       {withLabel && <span>Urgent</span>}
       {!withLabel && <span className="sr-only">Urgent</span>}
     </span>
@@ -132,7 +132,10 @@ function ListBox({ list, onOpen }) {
   return (
     <button type="button" className="ck-box-btn" onClick={() => onOpen(list.id)} aria-label={`Open ${list.title}`}>
       <Card variant="soft" className="cg-w ck-box">
-        <h3 className="ck-box-title"><span>{list.title}</span></h3>
+        <div className="ck-box-title">
+          <h3 className="ck-box-title-t"><span>{list.title}</span></h3>
+          {list.date && <span className="ck-box-date"><IconCalendar />{dateLabel(list.date, list.dateEnd)}</span>}
+        </div>
         <div className="ck-box-foot">
           <div className="ck-bar" role="progressbar" aria-valuenow={p.pct} aria-valuemin={0} aria-valuemax={100}
             aria-label={`${list.title} progress`}>
@@ -178,10 +181,12 @@ function ObjectiveInput({ onAdd }) {
           placeholder="09:00am - 10:00am Revise graphs"
           aria-label="New objective"
         />
-        <button type="button" className={'ck-urg-switch' + (urgent ? ' is-on' : '')}
+        <button type="button" className={'ck-urgbtn ck-urgbtn--lg' + (urgent ? ' is-on' : '')}
           onClick={() => setUrgent((u) => !u)} aria-pressed={urgent}
           aria-label={urgent ? 'Mark new objective normal' : 'Mark new objective urgent'}
-          title={urgent ? 'Urgent — click for normal' : 'Mark urgent'} />
+          title={urgent ? 'Urgent — click for normal' : 'Mark urgent'}>
+          <IconAlert />
+        </button>
         <button type="button" className="ck-addbtn" onClick={submit} disabled={!text.trim()} aria-label="Add objective">
           <IconPlus />
         </button>
@@ -481,10 +486,12 @@ function Modal({ mode, list, api, onClose }) {
                         <button type="button" className="ck-obj-t ck-obj-t--btn" onClick={() => setEditId(i.id)} aria-label={`Edit ${i.text}`}>
                           {i.text}
                         </button>
-                        <button type="button" className={'ck-urg-switch' + (i.urgent ? ' is-on' : '')}
+                        <button type="button" className={'ck-urgbtn ck-urgbtn--sm' + (i.urgent ? ' is-on' : '')}
                           onClick={() => toggleUrgent(i.id)} aria-pressed={!!i.urgent}
                           aria-label={i.urgent ? `Mark ${i.text} normal` : `Mark ${i.text} urgent`}
-                          title={i.urgent ? 'Urgent — click for normal' : 'Mark urgent'} />
+                          title={i.urgent ? 'Urgent — click for normal' : 'Mark urgent'}>
+                          <IconAlert />
+                        </button>
                         <button type="button" className="ck-obj-x" onClick={() => drop(i.id)} aria-label={`Delete ${i.text}`}>
                           <IconTrash />
                         </button>
