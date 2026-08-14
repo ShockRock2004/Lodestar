@@ -83,10 +83,12 @@ function globalStreak() {
 }
 
 /* ---------- single source of truth for the day ---------- */
+// ML · Quant is paused indefinitely (2026-08-14) — its card stays on the home page
+// as a link, but it's excluded from the plan math below (overall %, today's
+// completion ring, "pick up where you left off") so it doesn't drag those down or
+// get suggested as the resume target. Mirrors AI_EXCLUDED in lib/aicontext.js.
 function useToday() {
   const sd = useReading('system-design')
-  const ma = useReading('math')
-  const ho = useReading('handson')
   const dsa = useCollection('dsa')
   const cs = getStore('cs:stats', { done: 0, total: 46, pct: 0 })
   const odin = getStore('odin:stats', { done: 0, total: 197, pct: 0 })
@@ -103,13 +105,9 @@ function useToday() {
       items: [{ label: 'Today’s reading', meta: sd.finished ? 'complete' : `pp. ${dayOf(sd).from}–${dayOf(sd).to}`, done: readDone(sd), toggle: () => toggleToday(sd) }],
     },
     {
-      key: 'ml', name: 'ML · Quant', Icon: IconMl, pct: Math.round((ma.pct + ho.pct) / 2), to: '/ml-quant',
-      state: `Math d${ma.currentDay} · Hands-On d${ho.currentDay}`, late: Math.max(ma.behind, ho.behind) > 0,
-      pace: Math.max(ma.behind, ho.behind) ? `${Math.max(ma.behind, ho.behind)}d behind` : 'On track',
-      items: [
-        { label: 'Math for ML', meta: ma.finished ? 'complete' : `pp. ${dayOf(ma).from}–${dayOf(ma).to}`, done: readDone(ma), toggle: () => toggleToday(ma) },
-        { label: 'Hands-On ML', meta: ho.finished ? 'complete' : `pp. ${dayOf(ho).from}–${dayOf(ho).to}`, done: readDone(ho), toggle: () => toggleToday(ho) },
-      ],
+      key: 'ml', name: 'ML · Quant', Icon: IconMl, pct: null, to: '/ml-quant',
+      state: 'Paused', late: false, pace: null,
+      items: [],
     },
     {
       key: 'cs', name: 'CS Core', Icon: IconCs, pct: cs.pct, to: '/cs-core',
@@ -142,8 +140,6 @@ function useToday() {
 
   const cand = [
     { name: 'System Design', to: '/system-design', behind: sd.behind, done: readDone(sd), obj: sd.finished ? 'Plan complete' : `${fmtDate(scheduleInfo('system-design', sd.total).dates[Math.min(sd.currentDay, sd.total) - 1])} · pp. ${dayOf(sd).from}–${dayOf(sd).to}` },
-    { name: 'Hands-On ML', to: '/ml-quant', behind: ho.behind, done: readDone(ho), obj: ho.finished ? 'Plan complete' : `Day ${ho.currentDay} · pp. ${dayOf(ho).from}–${dayOf(ho).to}` },
-    { name: 'Math for ML', to: '/ml-quant', behind: ma.behind, done: readDone(ma), obj: ma.finished ? 'Plan complete' : `Day ${ma.currentDay} · pp. ${dayOf(ma).from}–${dayOf(ma).to}` },
     { name: 'DSA', to: '/dsa', behind: 0, done: !!dsaToday, obj: 'Log today’s LeetCode problem' },
   ]
   const resume = cand.filter((x) => !x.done).sort((a, b) => b.behind - a.behind)[0] || null

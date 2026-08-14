@@ -8,9 +8,12 @@ export const SCHEDULE_SKIPS = ['2026-08-27', '2026-08-31', '2026-09-02']
 const SKIP = new Set(SCHEDULE_SKIPS)
 
 // keyed by the ids used across the app (reading planId 'system-design', plus our own track ids)
+// system-design restarted 2026-08-16 after a pause; start is backdated 5 days so day 6
+// (the first unread day, pp. 51+ — see SD_FROZEN in plans.js) lands on Aug 16 and day
+// 48 (the last day) lands on Sep 30. cs-core restarted from Aug 16 the same day.
 export const SCHEDULE = {
-  'system-design': { start: '2026-08-01', weekendDouble: false },
-  'cs-core': { start: '2026-08-01', weekendDouble: false },
+  'system-design': { start: '2026-08-11', weekendDouble: false },
+  'cs-core': { start: '2026-08-16', weekendDouble: false },
   'full-stack': { start: '2026-08-01', weekendDouble: true },
   'lld': { start: '2026-10-01', weekendDouble: false },
 }
