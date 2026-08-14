@@ -1,11 +1,17 @@
 // Day-by-day reading plans, generated from chapter page ranges.
 
+// `perDay` is either a constant page count or an array of exact per-day sizes
+// (used to redistribute a plan unevenly across a fixed number of days).
 function buildDays(segments, perDay, groupName) {
   const flat = []
   segments.forEach((s) => { for (let p = s.from; p <= s.to; p++) flat.push({ p, t: s.title }) })
+  const sizes = Array.isArray(perDay) ? perDay : null
   const days = []
-  for (let i = 0; i < flat.length; i += perDay) {
-    const chunk = flat.slice(i, i + perDay)
+  let i = 0, s = 0
+  while (i < flat.length) {
+    const size = sizes ? sizes[s++] : perDay
+    const chunk = flat.slice(i, i + size)
+    i += size
     const chapters = [...new Set(chunk.map((c) => c.t))]
     days.push({
       from: chunk[0].p,
@@ -16,6 +22,19 @@ function buildDays(segments, perDay, groupName) {
     })
   }
   return days
+}
+
+// Split `total` units across `slots` days as evenly as possible (each day differs
+// by at most 1 unit from the others), summing exactly to `total`.
+function evenSizes(total, slots) {
+  const out = []
+  let prev = 0
+  for (let i = 1; i <= slots; i++) {
+    const cur = Math.round((total * i) / slots)
+    out.push(cur - prev)
+    prev = cur
+  }
+  return out
 }
 
 const numbered = (days) => days.map((d, i) => ({ ...d, n: i + 1 }))
@@ -53,9 +72,22 @@ const SD_VOL2 = [
   { title: 'Digital Wallet', from: 356, to: 393 },
   { title: 'Stock Exchange', from: 394, to: 438 },
 ]
+// Restarted 2026-08-16 (paused for personal reasons). Days 1-5 (pp. 1-50) were
+// already read before the restart, so they're frozen exactly as before — same
+// chunking, so the existing checkmarks (day indices 1-5) still line up. Everything
+// after is redistributed across the 43 reading days between Aug 16 and Sep 30, 2026
+// (see SCHEDULE_SKIPS in schedule.js for the 3 days excluded from that window),
+// split proportionally between the two volumes' remaining page counts.
+const SD_VOL1_REMAIN = SD_VOL1.slice(3) // pp. 51+ — segments 0-2 (pp. 1-50) are the frozen days
+const SD_VOL1_REMAIN_TOTAL = SD_VOL1_REMAIN.reduce((s, seg) => s + (seg.to - seg.from + 1), 0)
+const SD_VOL2_TOTAL = SD_VOL2.reduce((s, seg) => s + (seg.to - seg.from + 1), 0)
+const SD_REMAIN_SLOTS = 43
+const SD_VOL1_SLOTS = Math.round((SD_VOL1_REMAIN_TOTAL / (SD_VOL1_REMAIN_TOTAL + SD_VOL2_TOTAL)) * SD_REMAIN_SLOTS)
+const SD_VOL2_SLOTS = SD_REMAIN_SLOTS - SD_VOL1_SLOTS
 const SD_DAYS = numbered([
-  ...buildDays(SD_VOL1, 10, 'Volume 1'),
-  ...buildDays(SD_VOL2, 10, 'Volume 2'),
+  ...buildDays(SD_VOL1.slice(0, 3), 10, 'Volume 1'),
+  ...buildDays(SD_VOL1_REMAIN, evenSizes(SD_VOL1_REMAIN_TOTAL, SD_VOL1_SLOTS), 'Volume 1'),
+  ...buildDays(SD_VOL2, evenSizes(SD_VOL2_TOTAL, SD_VOL2_SLOTS), 'Volume 2'),
 ])
 
 const MATH_SEGS = [
@@ -83,8 +115,10 @@ const HANDSON_SEGS = [
 ]
 const HANDSON_DAYS = numbered(buildDays(HANDSON_SEGS, 6))
 
+const SD_AVG_PER_DAY = Math.round(SD_DAYS.reduce((s, d) => s + d.count, 0) / SD_DAYS.length)
+
 export const PLANS = {
-  'system-design': { id: 'system-design', title: 'System Design', source: 'Alex Xu · Vol 1 + 2', perDay: 10, days: SD_DAYS, total: SD_DAYS.length },
+  'system-design': { id: 'system-design', title: 'System Design', source: 'Alex Xu · Vol 1 + 2', perDay: SD_AVG_PER_DAY, days: SD_DAYS, total: SD_DAYS.length },
   math: { id: 'math', title: 'Mathematics for ML', source: 'Deisenroth · Ch 4-12', perDay: 6, days: MATH_DAYS, total: MATH_DAYS.length },
   handson: { id: 'handson', title: 'Hands-On ML', source: 'Geron · 8 chapters', perDay: 6, days: HANDSON_DAYS, total: HANDSON_DAYS.length },
 }
