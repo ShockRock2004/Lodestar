@@ -5,9 +5,10 @@
 // regenerated over the shorter Aug 17 -> Sep 30 runway.
 //
 // No problems are dropped: if the shorter runway can't fit everything at the normal
-// daily budget, Friday and Monday get extra capacity (in steps) until it fits, rather
-// than aborting or cutting content — same "does not fit -> widen Fri/Mon" contract as
-// the original seed script had "does not fit -> abort".
+// daily budget, every normal/weekend content day gets a small uniform bump (in steps)
+// until it fits, keeping the day-to-day load even rather than piling extra onto a
+// couple of weekdays — same "does not fit -> widen the budget" contract as the
+// original seed script had "does not fit -> abort".
 //
 // Run:  node web/scripts/reseed-dsa-dp-onward.mjs [--dry-run]
 // Reads Supabase creds from web/.env.local (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).
@@ -78,12 +79,13 @@ const TOPIC_TAG = {
   'Binary Trees': 'Trees', BST: 'BST', Greedy: 'Greedy', 'Sliding Window & Two Pointer': 'Sliding Window',
 }
 
-// `boost` extra minutes/day, applied only to normal-class Friday/Monday, to absorb
-// whatever the shorter runway can't fit at the base budget.
+// `boost` extra minutes/day, applied uniformly across every normal/weekend content day
+// (not concentrated on any particular weekday), to absorb whatever the shorter runway
+// can't fit at the base budget while keeping the day-to-day load even.
 function buildSchedule(boost) {
   const allDays = classifyDays()
   const work = allDays.filter((d) => BASE_CAP[d.cls] > 0).map((d) => {
-    const boosted = d.cls === 'normal' && (d.dow === 'Fri' || d.dow === 'Mon')
+    const boosted = d.cls === 'normal' || d.cls === 'weekend'
     return { ...d, cap: BASE_CAP[d.cls] + (boosted ? boost : 0), used: 0, items: [], kind: 'content', boosted }
   })
   const consolidation = work.slice(-2)
@@ -130,14 +132,14 @@ function buildSchedule(boost) {
   return { work, overflow, allDays }
 }
 
-// Widen Friday/Monday in 15-min steps until everything fits (cap the search so a real
-// modeling bug aborts loudly instead of ballooning days forever).
+// Widen every content day in 5-min steps until everything fits (cap the search so a
+// real modeling bug aborts loudly instead of ballooning days forever).
 function buildScheduleFitting() {
-  for (let boost = 0; boost <= 600; boost += 15) {
+  for (let boost = 0; boost <= 300; boost += 5) {
     const res = buildSchedule(boost)
     if (res.overflow.length === 0) return { ...res, boost }
   }
-  throw new Error('Could not fit the plan into Aug 17 - Sep 30 even with a 600min/day Fri/Mon boost')
+  throw new Error('Could not fit the plan into Aug 17 - Sep 30 even with a 300min/day boost')
 }
 
 // =====================================================================
@@ -182,7 +184,6 @@ function emitRows() {
       const topics = [TOPIC_TAG[it._topic]]
       if (it.difficulty == null) topics.push('Theory')
       if (block && !block.weak && i === 0) topics.push(`≈${est}h`)
-      if (d.boosted && i === 0) topics.push('extra')
       rows.push(mkRow({ slug: slugOf(it.url), title: it.title, url: it.url, difficulty: it.difficulty, topics, date: d.key }))
     })
   }
@@ -195,7 +196,7 @@ function emitRows() {
 // =====================================================================
 async function main() {
   const { rows, overflow, allDays, boost } = emitRows()
-  console.log(`Fitted with Fri/Mon boost = +${boost}min/day`)
+  console.log(`Fitted with a uniform +${boost}min/day boost on normal/weekend content days`)
   if (overflow.length) { console.error('ABORT — unexpected overflow:', overflow.length); process.exit(1) }
 
   const srcCounts = Object.fromEntries(BLOCKS.map((b) => [TOPIC_TAG[b.label], b.problems.length]))
@@ -222,8 +223,13 @@ async function main() {
   console.log('Date span:', dates[0], '→', dates[dates.length - 1])
   console.log('Rows on Wednesdays/rest days (must be 0):', bad.length)
   console.log('Rows with null URL (must be 0):', noUrl.length)
-  const boostedDays = [...new Set(rows.filter((r) => (r.topics || []).includes('extra')).map((r) => r.target_date))]
-  console.log('Boosted Fri/Mon days used:', boostedDays.length, boostedDays.slice(0, 10))
+  const perDay = {}
+  rows.forEach((r) => { perDay[r.target_date] = (perDay[r.target_date] || 0) + 1 })
+  const counts = Object.values(perDay)
+  console.log(`Items/day spread — min ${Math.min(...counts)}, max ${Math.max(...counts)}, avg ${(counts.reduce((a, b) => a + b, 0) / counts.length).toFixed(1)}, across ${counts.length} days`)
+  if (process.env.DEBUG_DAYS) {
+    Object.keys(perDay).sort().forEach((k) => console.log(' ', k, DOW[new Date(k + 'T00:00:00').getDay()], perDay[k]))
+  }
 
   const pass = coverageOk && bad.length === 0 && noUrl.length === 0
   if (!pass) { console.log('\n❌ CHECKS FAILED — aborting before touching Supabase'); process.exit(1) }
