@@ -3,14 +3,13 @@ import { Link } from 'react-router-dom'
 import { IconBack } from '../components/icons.jsx'
 import { SmallRing } from '../components/ui.jsx'
 import { useStore } from '../lib/store.js'
-import { scheduleInfo, fmtDate, fmtDateFull } from '../lib/schedule.js'
 import {
-  LLD_DAYS, LLD_TOTAL_DAYS, TYPE_LABEL,
-  dayComplete, currentDayIndex, lldPct, phaseStats, doneDaysCount, writeLldStats,
-} from '../lib/lld.js'
+  SQL_DAYS, SQL_TOTAL_DAYS, TYPE_LABEL, DIFFICULTY_TYPES,
+  dayComplete, currentDayIndex, sqlPct, phaseStats, doneDaysCount, writeSqlStats,
+} from '../lib/sql.js'
 
 const PAGE = 12
-const PHASE_SHORT = { 'OOP Foundations': 'OOP', 'Design Principles': 'PRIN', 'UML & Patterns': 'PAT', 'Interview Tips': 'TIPS', Questions: 'Q' }
+const PHASE_SHORT = { 'SQLite Journey': 'SQLite', 'LeetCode SQL 50': 'SQL50', 'Database Quest': 'QUEST' }
 
 function Check({ done, onClick, label }) {
   return (
@@ -20,28 +19,31 @@ function Check({ done, onClick, label }) {
   )
 }
 
-export default function Lld() {
+function TypeTag({ type }) {
+  if (DIFFICULTY_TYPES.has(type)) return <span className={'uchip ' + type}>{TYPE_LABEL[type]}</span>
+  return <span className="odin-tag">{TYPE_LABEL[type] || type}</span>
+}
+
+export default function Sql() {
   const [ready, setReady] = useState(false)
   useEffect(() => {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) { setReady(true); return }
     const t = setTimeout(() => setReady(true), 500); return () => clearTimeout(t)
   }, [])
-  const [done, setDone] = useStore('lld:done', {})
-  const [notes, setNotes] = useStore('lld:notes', {})
+  const [done, setDone] = useStore('sql:done', {})
+  const [notes, setNotes] = useStore('sql:notes', {})
   const setNote = (n, text) => setNotes((s) => ({ ...s, [n]: text }))
   const [selDay, setSelDay] = useState(null)
   const [page, setPage] = useState(0)
   const swipeX = useRef(0)
 
-  const days = LLD_DAYS
-  const total = LLD_TOTAL_DAYS
+  const days = SQL_DAYS
+  const total = SQL_TOTAL_DAYS
   const toggle = (key) => setDone((s) => { const n = { ...s }; if (n[key]) delete n[key]; else n[key] = new Date().toISOString(); return n })
   const markDay = (day, complete) => setDone((s) => { const n = { ...s }; day.items.forEach((it) => { if (complete) n[it.key] = new Date().toISOString(); else delete n[it.key] }); return n })
 
   const curIdx = useMemo(() => currentDayIndex(done), [done])
-  const cal = useMemo(() => scheduleInfo('lld', total), [total])
-  const focusDay = Math.min(cal.todayN || curIdx, total)
-  const isToday = (n) => cal.todaySet.has(n)
+  const focusDay = Math.min(curIdx, total)
   const active = selDay && selDay <= total ? selDay : focusDay
   useEffect(() => { setPage(Math.floor((active - 1) / PAGE)) }, [active])
   const goDay = (delta) => setSelDay((prev) => { const cur = prev && prev <= total ? prev : focusDay; return Math.min(total, Math.max(1, cur + delta)) })
@@ -55,18 +57,13 @@ export default function Lld() {
     window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey)
   }, [total]) // eslint-disable-line
 
-  const { doneItems, pct } = lldPct(done)
+  const { doneItems, pct } = sqlPct(done)
   const phases = phaseStats(done)
   const doneDays = doneDaysCount(done)
   const allComplete = doneDays >= total
-  const behind = Math.max(0, cal.due - doneDays)
-  const ahead = Math.max(0, doneDays - cal.due)
-  const paceText = allComplete ? 'Complete' : behind ? `${behind}d behind` : ahead ? `${ahead}d ahead` : 'On track'
-  const paceCls = allComplete ? 'ok' : behind ? 'late' : ahead ? 'ok' : 'ontrack'
   const remaining = total - doneDays
-  const estFinish = cal.finishISO ? new Date(cal.finishISO + 'T00:00') : new Date()
 
-  useEffect(() => { writeLldStats(done) }, [done])
+  useEffect(() => { writeSqlStats(done) }, [done])
 
   const activeDay = days[active - 1]
   const dayDone = dayComplete(activeDay, done)
@@ -78,20 +75,20 @@ export default function Lld() {
     <div className="cs-wrap">
       <div className="pagehead reveal">
         <Link to="/" className="back" aria-label="Back to home"><IconBack /></Link>
-        <div className="htx"><div className="eye">Curriculum · awesome-low-level-design</div><h1>Low Level Design</h1></div>
+        <div className="htx"><div className="eye">Curriculum · SQLite journey · LeetCode SQL 50 · Database Quest</div><h1>SQL</h1></div>
       </div>
 
       {!ready ? null : (
         <div className="cs-grid3 rk-grid">
           <aside className="cs-col cs-col-left reveal">
             <div className="cs-box rk-stats">
-              <div className="cs-panel-eye">LLD interview prep · Oct 1 – Nov 15</div>
+              <div className="cs-panel-eye">SQL prep · self-paced</div>
               <div className="rk-stat-body">
                 <SmallRing pct={pct} size={92} stroke={9} />
                 <div className="rk-stat-info">
-                  <div className="cs-head-day">{fmtDate(cal.dates[focusDay - 1])} <span>/ {total} days</span></div>
+                  <div className="cs-head-day">Day {focusDay} <span>/ {total}</span></div>
                   <div className="cs-head-sub">{doneDays} of {total} days · {doneItems} items done</div>
-                  <span className={`rpace ${paceCls}`}>{paceText}</span>
+                  <span className="rpace ontrack">Self-paced</span>
                 </div>
               </div>
               <div className="rk-vols">
@@ -103,19 +100,15 @@ export default function Lld() {
                   </div>
                 ))}
               </div>
-              <div className="rk-finish">{allComplete ? 'Plan complete — you’re interview-ready.' : <>Ends <b>{estFinish.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</b> · {remaining} day{remaining === 1 ? '' : 's'} left</>}</div>
+              <div className="rk-finish">{allComplete ? 'Plan complete — nice work.' : <>{remaining} day{remaining === 1 ? '' : 's'} left at this pace.</>}</div>
             </div>
 
             <div className="cs-box">
-              <div className="cs-panel-eye">The method · every problem</div>
+              <div className="cs-panel-eye">The plan · 3 phases</div>
               <ol className="lld-method">
-                <li>Clarify requirements &amp; scope cuts</li>
-                <li>Core entities → classes (SRP)</li>
-                <li>Map relationships (has-a vs owns-a)</li>
-                <li>Apply 1–3 patterns, justified</li>
-                <li>Define public APIs</li>
-                <li>Concurrency &amp; edge cases</li>
-                <li>Code a clean skeleton</li>
+                <li>Days 1–10 · Coddy SQLite journey (99 lessons)</li>
+                <li>Days 11–27 · LeetCode Top SQL 50, 3/day</li>
+                <li>Days 28–32 · Database Quest, 1 level/day</li>
               </ol>
             </div>
           </aside>
@@ -129,7 +122,7 @@ export default function Lld() {
                 <button className="cs-nav-arrow" onClick={() => goDay(-1)} disabled={active <= 1} aria-label="Previous day">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
                 </button>
-                <span className="cs-detail-eye">{isToday(active) ? 'Today · ' : ''}{fmtDateFull(cal.dates[active - 1])}</span>
+                <span className="cs-detail-eye">{active === focusDay ? 'Up next · ' : ''}Day {active} of {total}</span>
                 <button className="cs-nav-arrow" onClick={() => goDay(1)} disabled={active >= total} aria-label="Next day">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
                 </button>
@@ -137,8 +130,7 @@ export default function Lld() {
               <div className="rk-detail">
                 <div className="rk-detail-top">
                   <span className="uchip">{activeDay.phase}</span>
-                  {activeDay.tag ? <span className="lld-tag">{activeDay.tag}</span> : null}
-                  {isToday(active) ? <span className="rk-today-badge">Today</span> : null}
+                  {active === focusDay ? <span className="rk-today-badge">Up next</span> : null}
                   {dayDone ? <span className="rk-done-badge">Done</span> : null}
                 </div>
                 <div className="rk-pages">{activeDay.title}</div>
@@ -149,15 +141,15 @@ export default function Lld() {
                     <div className={done[it.key] ? 'odin-item done' : 'odin-item'} key={it.key}>
                       <Check done={!!done[it.key]} onClick={() => toggle(it.key)} label={`Toggle ${it.title}`} />
                       <div className="odin-item-body">
-                        <div className="odin-item-t">{it.title}<span className="odin-tag">{TYPE_LABEL[it.type] || it.type}</span></div>
+                        <div className="odin-item-t">{it.title}<TypeTag type={it.type} /></div>
                         {it.hours ? <div className="odin-item-m">~{it.hours}h</div> : null}
                       </div>
                       {it.url ? <a className="odin-open" href={it.url} target="_blank" rel="noreferrer" aria-label={`Open ${it.title}`} onClick={(e) => e.stopPropagation()}>Open ↗</a> : null}
                     </div>
                   ))}
                 </div>
-                <label className="rk-notes-label" htmlFor={`lld-note-${active}`} style={{ display: 'block', marginTop: 16 }}>Notes</label>
-                <textarea id={`lld-note-${active}`} className="rnote lld-note" placeholder="Key ideas, class sketches, patterns to remember, links to your solutions…" value={notes[active] || ''} onChange={(e) => setNote(active, e.target.value)} />
+                <label className="rk-notes-label" htmlFor={`sql-note-${active}`} style={{ display: 'block', marginTop: 16 }}>Notes</label>
+                <textarea id={`sql-note-${active}`} className="rnote lld-note" placeholder="Query patterns, gotchas, links to your solutions…" value={notes[active] || ''} onChange={(e) => setNote(active, e.target.value)} />
                 <button className={dayDone ? 'rbtn done' : 'rbtn'} onClick={() => markDay(activeDay, !dayDone)}>{dayDone ? 'Completed ✓' : 'Mark day complete'}</button>
               </div>
             </div>
@@ -171,11 +163,11 @@ export default function Lld() {
                   {slice.map((d, i) => {
                     const n = pg * PAGE + i + 1
                     const isDone = dayComplete(d, done)
-                    const cls = 'cs-cell' + (isDone ? ' complete' : '') + (isToday(n) ? ' cs-today' : '') + (n === active ? ' sel' : '')
+                    const cls = 'cs-cell' + (isDone ? ' complete' : '') + (n === focusDay ? ' cs-today' : '') + (n === active ? ' sel' : '')
                     return (
-                      <button key={n} className={cls} style={{ animationDelay: `${Math.min(i * 8, 200)}ms` }} onClick={() => setSelDay(n)} aria-label={`${fmtDate(cal.dates[n - 1])}${isToday(n) ? ', today' : ''}`}>
+                      <button key={n} className={cls} style={{ animationDelay: `${Math.min(i * 8, 200)}ms` }} onClick={() => setSelDay(n)} aria-label={`Day ${n}${n === focusDay ? ', up next' : ''}`}>
                         {isDone ? <span className="cs-cell-check"><svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 12l4 4 8-8" fill="none" stroke="#0b0b0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <SmallRing pct={n === active ? 100 : 0} size={26} stroke={3} showValue={false} />}
-                        <span className="cs-cell-n">{fmtDate(cal.dates[n - 1])}{notes[n] ? <i className="rk-note-dot" /> : null}</span>
+                        <span className="cs-cell-n">Day {n}{notes[n] ? <i className="rk-note-dot" /> : null}</span>
                         <span className="cs-cell-m">{PHASE_SHORT[d.phase]}</span>
                       </button>
                     )
