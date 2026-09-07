@@ -11,6 +11,7 @@ import MlQuant from './pages/MlQuant.jsx'
 import Search from './pages/Search.jsx'
 import Odin from './pages/Odin.jsx'
 import Lld from './pages/Lld.jsx'
+import Sql from './pages/Sql.jsx'
 import DsaPlan from './pages/DsaPlan.jsx'
 import Checklist from './pages/Checklist.jsx'
 import { migrateLegacy } from './lib/progress.js'
@@ -83,6 +84,7 @@ export default function App() {
           <Route path="search" element={<Search />} />
           <Route path="full-stack" element={<Odin />} />
           <Route path="lld" element={<Lld />} />
+          <Route path="sql" element={<Sql />} />
           <Route path="checklist" element={<Checklist />} />
         </Route>
       </Routes>

@@ -6,9 +6,10 @@ import Modal from '../components/Modal.jsx'
 import CalendarCard from '../components/CalendarCard.jsx'
 import { useReading, useCollection, activityRange, entriesForDate, readingStats, activitySectionLevels } from '../lib/progress.js'
 import { getStore, useStore, todayISO } from '../lib/store.js'
-import { IconChevron, IconDsa, IconSys, IconCs, IconMl, IconOdin, IconLld, IconChecklist } from '../components/icons.jsx'
+import { IconChevron, IconDsa, IconSys, IconCs, IconMl, IconOdin, IconLld, IconSql, IconChecklist } from '../components/icons.jsx'
 import { scheduleInfo, fmtDate } from '../lib/schedule.js'
 import { LLD_TOTAL_DAYS } from '../lib/lld.js'
+import { SQL_TOTAL_DAYS } from '../lib/sql.js'
 import SwipeDeck from '../components/SwipeDeck.jsx'
 import AiPanel from '../components/AiPanel.jsx'
 import { CHECKLIST_KEY, checklistSummary, urgentFeed } from '../lib/checklists.js'
@@ -94,6 +95,7 @@ function useToday() {
   const odin = getStore('odin:stats', { done: 0, total: 197, pct: 0 })
   const lld = getStore('lld:stats', { done: 0, total: 0, pct: 0, doneDays: 0 })
   const lldBehind = Math.max(0, scheduleInfo('lld', LLD_TOTAL_DAYS).due - (lld.doneDays || 0))
+  const sql = getStore('sql:stats', { done: 0, total: 0, pct: 0, doneDays: 0 })
 
   const dsaToday = dsa.items.find((x) => x.date === todayISO())
   const readDone = (r) => doneToday(r).length > 0 || r.finished
@@ -132,6 +134,11 @@ function useToday() {
       pace: lldBehind ? `${lldBehind}d behind` : 'On track',
       objective: 'OOP · patterns · 33 problems', items: [],
     },
+    {
+      key: 'sql', name: 'SQL', Icon: IconSql, pct: sql.pct, to: '/sql',
+      state: `${sql.doneDays || 0} of ${SQL_TOTAL_DAYS} days`, late: false, pace: 'Self-paced',
+      objective: 'SQLite journey → SQL 50 → Database Quest', items: [],
+    },
   ]
 
   const allItems = tracks.flatMap((t) => t.items)
@@ -144,7 +151,7 @@ function useToday() {
   ]
   const resume = cand.filter((x) => !x.done).sort((a, b) => b.behind - a.behind)[0] || null
 
-  const ORDER = ['dsa', 'ml', 'cs', 'sd', 'odin', 'lld']
+  const ORDER = ['dsa', 'ml', 'cs', 'sd', 'odin', 'lld', 'sql']
   tracks.sort((a, b) => ORDER.indexOf(a.key) - ORDER.indexOf(b.key))
   const pcts = tracks.map((t) => t.pct).filter((p) => p != null)
   const overall = pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : 0
@@ -369,7 +376,7 @@ const TL_P2 = [
   { name: 'DSA Contests', Icon: IconDsa, to: '/dsa' },
   { name: 'Projects', Icon: null },
   { name: 'Intern project', Icon: null },
-  { name: 'SQL 50', Icon: null },
+  { name: 'SQL 50', Icon: IconSql, to: '/sql' },
 ]
 
 function TLChip({ Icon, name, to }) {
