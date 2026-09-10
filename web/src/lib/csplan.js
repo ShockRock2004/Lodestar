@@ -1,9 +1,9 @@
 import { VIDEO_DURATIONS } from './csdurations.js'
 
-export const PACE_OPTIONS = [30, 60, 90]
+export const PACE_OPTIONS = [30, 60, 90, 120]
 export const DEFAULT_PACE = 60
 export const WEEK_SIZE = 7
-export const PACE_LABEL = { 30: '0.5 hr', 60: '1 hr', 90: '1.5 hr' }
+export const PACE_LABEL = { 30: '0.5 hr', 60: '1 hr', 90: '1.5 hr', 120: '2 hr' }
 
 export function ytid(u) {
   if (!u) return null
