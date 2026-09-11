@@ -149,10 +149,8 @@ export default function AiPanel() {
       {/* deterministic figures — computed locally, never from the model */}
       <div className="ai-stats">
         <div className="ai-stat"><b>{stats.daysLeft}</b><span>days to Dec 1</span></div>
-        {/* labelled "tracked" because ML · Quant is excluded from the review, so this
-            legitimately differs from the all-tracks figure in the page header */}
-        <div className="ai-stat" title="Average across the tracks under review (excludes ML · Quant)">
-          <b>{stats.overall}%</b><span>overall · tracked</span>
+        <div className="ai-stat" title="Average across all tracks">
+          <b>{stats.overall}%</b><span>overall</span>
         </div>
         <div className="ai-stat"><b>{stats.streak}</b><span>day streak</span></div>
         <div className="ai-stat"><b>{stats.week}</b><span>done this week</span></div>

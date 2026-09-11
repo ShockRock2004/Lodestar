@@ -37,7 +37,6 @@ export const IconSys = () => S(<><rect width="20" height="8" x="2" y="2" rx="2" 
 export const IconCs = () => S(<><rect x="7" y="7" width="10" height="10" rx="1.5" /><path d="M10 3v3M14 3v3M10 18v3M14 18v3M3 10h3M3 14h3M18 10h3M18 14h3" /></>, { strokeWidth: 1.8 })
 export const IconOdin = () => S(<><path d="M12 3.2 3.3 8l8.7 4.8L20.7 8 12 3.2Z" /><path d="M3.3 12l8.7 4.8L20.7 12" /><path d="M3.3 16l8.7 4.8L20.7 16" /></>, { strokeWidth: 1.7 })
 export const IconLld = () => S(<><rect x="9" y="3" width="6" height="4.4" rx="1" /><rect x="3" y="14.6" width="6" height="4.4" rx="1" /><rect x="15" y="14.6" width="6" height="4.4" rx="1" /><path d="M12 7.4v3.4M6 14.6v-3.8h12v3.8" /></>, { strokeWidth: 1.8 })
-export const IconMl = () => S(<><path d="M12 18V5" /><path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4" /><path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5" /><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77" /><path d="M18 18a4 4 0 0 0 2-7.464" /><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517" /><path d="M6 18a4 4 0 0 1-2-7.464" /><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77" /></>, { strokeWidth: 1.7 })
 export const IconSql = () => S(<><ellipse cx="12" cy="5" rx="8" ry="3" /><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5" /><path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" /></>, { strokeWidth: 1.8 })
 
 export function FlameFire({ size = 20 }) {

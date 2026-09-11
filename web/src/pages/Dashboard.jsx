@@ -8,7 +8,7 @@ import { readingStats, activityLast7 } from '../lib/progress.js'
 import { getStore } from '../lib/store.js'
 import {
   IconHome, IconGrid, IconSearch, IconPlus, IconCalendar, IconUser,
-  IconDsa, IconSys, IconCs, IconMl, IconFlame, IconArrowUp,
+  IconDsa, IconSys, IconCs, IconFlame, IconArrowUp,
 } from '../components/icons.jsx'
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } }
@@ -22,7 +22,6 @@ const SUBJECTS = [
   { to: '/dsa', Icon: IconDsa, name: 'DSA', color: '#e6e6e6', m: 'Trapping Rain Water', pct: 64 },
   { to: '/system-design', Icon: IconSys, name: 'System Design', color: '#cfcfcf' },
   { to: '/cs-core', Icon: IconCs, name: 'CS Core', color: '#bdbdbd' },
-  { to: '/ml-quant', Icon: IconMl, name: 'ML / Quant', color: '#d6d6d6' },
 ]
 
 export default function Dashboard() {
@@ -30,15 +29,13 @@ export default function Dashboard() {
   const rm = useReducedMotion()
   const sd = readingStats('system-design')
   const act = activityLast7()
-  const overall = Math.round((sd.pct + readingStats('math').pct + readingStats('handson').pct) / 3)
+  const overall = sd.pct
   const ringLen = 2 * Math.PI * 88
   const cs = getStore('cs:stats', { pct: 0, done: 0, total: 0 })
-  const mlp = Math.round((readingStats('math').pct + readingStats('handson').pct) / 2)
   const subjData = {
     '/dsa': { m: 'Trapping Rain Water', pct: 64 },
     '/system-design': { m: 'Day ' + sd.currentDay + ' / ' + sd.total, pct: sd.pct },
     '/cs-core': { m: cs.total ? cs.done + '/' + cs.total + ' done' : '3 videos today', pct: cs.pct },
-    '/ml-quant': { m: 'Day ' + readingStats('math').currentDay + ' / SVMs', pct: mlp },
   }
   const dockItems = [
     { Icon: IconHome, to: '/', on: true }, { Icon: IconGrid, to: '/search' }, { Icon: IconSearch, to: '/search' },

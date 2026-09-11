@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Gauge, Sparkline, CountUp } from '../components/viz.jsx'
 import {
-  IconDsa, IconSys, IconCs, IconMl, IconFlame, IconFlag,
+  IconDsa, IconSys, IconCs, IconFlame, IconFlag,
   IconArrowUp, IconChevron, IconBell, IconUser,
 } from '../components/icons.jsx'
 import { readingStats, activityLast7 } from '../lib/progress.js'
@@ -18,20 +18,16 @@ function trailingStreak(raw) {
 
 export default function Home() {
   const sd = readingStats('system-design')
-  const math = readingStats('math')
-  const hands = readingStats('handson')
   const cs = getStore('cs:stats', { pct: 0, done: 0, total: 0 })
-  const quant = getStore('col:quant', [])
   const dsaLog = getStore('col:dsa', [])
   const act = activityLast7()
 
-  const mlPct = Math.round((math.pct + hands.pct) / 2)
-  const parts = [sd.pct, mlPct]
+  const parts = [sd.pct]
   if (cs.total) parts.push(cs.pct)
   const overall = Math.round(parts.reduce((a, b) => a + b, 0) / parts.length)
 
   const todayProblem = dsaLog.find((x) => x.date === todayISO())
-  const readingDaysLeft = (sd.total - sd.done) + (math.total - math.done) + (hands.total - hands.done)
+  const readingDaysLeft = sd.total - sd.done
   const streak = trailingStreak(act.raw)
 
   const tiles = [
@@ -42,15 +38,12 @@ export default function Home() {
       sub: `Day ${sd.currentDay} of ${sd.total} · ${sd.day ? sd.day.chapters[0] : ''}` },
     { to: '/cs-core', Icon: IconCs, label: 'CS Core', pct: cs.pct,
       sub: cs.total ? `${cs.done} of ${cs.total} videos done` : 'Open to load curriculum' },
-    { to: '/ml-quant', Icon: IconMl, label: 'ML · Quant', pct: mlPct,
-      sub: `Math d${math.currentDay} · Hands-On d${hands.currentDay}` },
   ]
 
   const todayRows = [
     { to: '/dsa', name: 'DSA', act: todayProblem ? `${todayProblem.title} · scored ${todayProblem.score}/5` : 'Log today’s problem', done: !!todayProblem },
     { to: '/cs-core', name: 'CS Core', act: cs.total ? `${cs.total - cs.done} videos remaining` : 'Load the curriculum' },
     { to: '/system-design', name: 'System Design', act: sd.day ? `Day ${sd.currentDay} · pp. ${sd.day.from}–${sd.day.to}` : 'Complete' },
-    { to: '/ml-quant', name: 'ML · Quant', act: math.day ? `Day ${math.currentDay} · ${math.day.chapters[0]}` : 'Complete' },
   ]
 
   return (

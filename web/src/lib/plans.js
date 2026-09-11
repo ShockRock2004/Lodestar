@@ -90,37 +90,10 @@ const SD_DAYS = numbered([
   ...buildDays(SD_VOL2, evenSizes(SD_VOL2_TOTAL, SD_VOL2_SLOTS), 'Volume 2'),
 ])
 
-const MATH_SEGS = [
-  { title: 'Ch 4 · Matrix Decompositions', from: 98, to: 138 },
-  { title: 'Ch 5 · Vector Calculus', from: 139, to: 171 },
-  { title: 'Ch 6 · Probability & Distributions', from: 172, to: 224 },
-  { title: 'Ch 7 · Continuous Optimization', from: 225, to: 248 },
-  { title: 'Ch 8 · When Models Meet Data', from: 251, to: 288 },
-  { title: 'Ch 9 · Linear Regression', from: 289, to: 316 },
-  { title: 'Ch 10 · Dimensionality Reduction (PCA)', from: 317, to: 347 },
-  { title: 'Ch 11 · Density Estimation (GMM)', from: 348, to: 369 },
-  { title: 'Ch 12 · Classification (SVM)', from: 370, to: 391 },
-]
-const MATH_DAYS = numbered(buildDays(MATH_SEGS, 6))
-
-const HANDSON_SEGS = [
-  { title: 'Ch 2 · End-to-End ML Project', from: 39, to: 102 },
-  { title: 'Ch 3 · Classification', from: 103, to: 130 },
-  { title: 'Ch 4 · Training Models', from: 131, to: 174 },
-  { title: 'Ch 7 · Ensemble Learning & Random Forests', from: 211, to: 236 },
-  { title: 'Ch 10 · Intro to ANN with Keras', from: 299, to: 356 },
-  { title: 'Ch 11 · Training Deep Neural Networks', from: 357, to: 402 },
-  { title: 'Ch 16 · NLP with RNNs & Attention', from: 577, to: 634 },
-  { title: 'Ch 19 · Training & Deploying TF Models', from: 721, to: 778 },
-]
-const HANDSON_DAYS = numbered(buildDays(HANDSON_SEGS, 6))
-
 const SD_AVG_PER_DAY = Math.round(SD_DAYS.reduce((s, d) => s + d.count, 0) / SD_DAYS.length)
 
 export const PLANS = {
   'system-design': { id: 'system-design', title: 'System Design', source: 'Alex Xu · Vol 1 + 2', perDay: SD_AVG_PER_DAY, days: SD_DAYS, total: SD_DAYS.length },
-  math: { id: 'math', title: 'Mathematics for ML', source: 'Deisenroth · Ch 4-12', perDay: 6, days: MATH_DAYS, total: MATH_DAYS.length },
-  handson: { id: 'handson', title: 'Hands-On ML', source: 'Geron · 8 chapters', perDay: 6, days: HANDSON_DAYS, total: HANDSON_DAYS.length },
 }
 
 export function groupDays(days) {

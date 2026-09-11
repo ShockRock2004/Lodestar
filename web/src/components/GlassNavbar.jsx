@@ -4,13 +4,12 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { GlassSurface } from './ui/glass-surface.jsx'
 import { GlassButton } from './ui/glass-button.jsx'
 import { cn } from '../lib/utils.js'
-import { IconSearch, IconHome, IconDsa, IconCs, IconMl, IconSys, IconOdin, IconLld, IconSql, IconChecklist, FlameFire, LodestarMark } from './icons.jsx'
+import { IconSearch, IconHome, IconDsa, IconCs, IconSys, IconOdin, IconLld, IconSql, IconChecklist, FlameFire, LodestarMark } from './icons.jsx'
 import { activityRange } from '../lib/progress.js'
 
 const LINKS = [
   { to: '/', label: 'Home', Icon: IconHome },
   { to: '/dsa', label: 'DSA', Icon: IconDsa },
-  { to: '/ml-quant', label: 'ML · Quant', Icon: IconMl },
   { to: '/cs-core', label: 'CS Core', Icon: IconCs },
   { to: '/system-design', label: 'System Design', Icon: IconSys },
   { to: '/full-stack', label: 'Full Stack', Icon: IconOdin },

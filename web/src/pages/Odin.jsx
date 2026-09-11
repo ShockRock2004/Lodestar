@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { IconBack, TechLogo, TECH_LABEL } from '../components/icons.jsx'
-import { SmallRing } from '../components/ui.jsx'
+import { SmallRing, Segmented } from '../components/ui.jsx'
 import { useStore } from '../lib/store.js'
-import { activityRange } from '../lib/progress.js'
-import { scheduleInfo, fmtDate, fmtDateFull } from '../lib/schedule.js'
+import { scheduleInfo } from '../lib/schedule.js'
 import {
   ODIN_ITEMS, ODIN_COURSE_ORDER, ODIN_TOTAL_HOURS, ODIN_PACE,
   packOdinDays, dayHours, fmtHours, courseStats, currentDayIndex, writeOdinStats, odinPct, techForDay,
@@ -12,66 +11,12 @@ import {
 
 const PAGE = 12
 const SHORT = { Foundations: 'FND', 'Intermediate HTML and CSS': 'HTML', JavaScript: 'JS', 'Advanced HTML and CSS': 'ADV', React: 'RCT', Databases: 'DB', NodeJS: 'NODE', 'Getting Hired': 'HIRE' }
-const RANGES = [{ k: 14, label: '2W' }, { k: 42, label: '6W' }, { k: 84, label: '12W' }]
 
 function Check({ done, onClick, label }) {
   return (
     <button className={done ? 'rcheck on' : 'rcheck'} onClick={onClick} aria-pressed={done} aria-label={label}>
       {done && <svg viewBox="0 0 24 24" width="14" height="14"><path d="M6 12l4 4 8-8" fill="none" stroke="#0b0b0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>}
     </button>
-  )
-}
-
-function smoothPath(pts) {
-  if (pts.length < 2) return ''
-  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2
-    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6
-    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6
-    d += `C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`
-  }
-  return d
-}
-
-function Consistency() {
-  const [ri, setRi] = useState(1)
-  const swipeX = useRef(0)
-  const range = RANGES[ri]
-  const { series, activeDays } = useMemo(() => {
-    const arr = activityRange(range.k)
-    const N = 14, size = Math.max(1, Math.ceil(arr.length / N)), series = []
-    for (let i = 0; i < arr.length; i += size) series.push(arr.slice(i, i + size).reduce((a, c) => a + c.count, 0))
-    return { series, activeDays: arr.filter((d) => d.count > 0).length }
-  }, [ri])
-  const W = 300, H = 120, pad = 8, top = 12, bot = 12
-  const max = Math.max(1, ...series)
-  const pts = series.map((v, i) => [pad + i * ((W - 2 * pad) / Math.max(1, series.length - 1)), H - bot - (v / max) * (H - top - bot)])
-  const line = smoothPath(pts)
-  const area = pts.length ? `${line} L${pts[pts.length - 1][0].toFixed(1)},${H} L${pts[0][0].toFixed(1)},${H} Z` : ''
-  const tip = pts[pts.length - 1] || [0, 0]
-  const grid = [0.25, 0.5, 0.75, 1].map((g) => H - bot - g * (H - top - bot))
-  const move = (dir) => setRi((v) => Math.min(RANGES.length - 1, Math.max(0, v + dir)))
-  return (
-    <div className="cs-box cs-box-viz"
-      onTouchStart={(e) => { swipeX.current = e.touches[0].clientX }}
-      onTouchEnd={(e) => { const dx = e.changedTouches[0].clientX - swipeX.current; if (Math.abs(dx) > 45) move(dx < 0 ? 1 : -1) }}>
-      <div className="cs-viz-headrow">
-        <span className="cs-panel-eye">Consistency</span>
-        <div className="cs-viz-ranges" role="tablist">
-          {RANGES.map((r, i) => <button key={r.k} className={'cs-range' + (i === ri ? ' on' : '')} onClick={() => setRi(i)} aria-selected={i === ri}>{r.label}</button>)}
-        </div>
-      </div>
-      <div className="cs-viz-stat">{activeDays} <em>active {activeDays === 1 ? 'day' : 'days'} · last {range.label}</em></div>
-      <svg className="cs-line" viewBox={`0 0 ${W} ${H}`} width="100%" height="120" preserveAspectRatio="none" aria-hidden="true">
-        <defs><linearGradient id="odinline-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffffff" stopOpacity="0.16" /><stop offset="1" stopColor="#ffffff" stopOpacity="0" /></linearGradient></defs>
-        {grid.map((y, i) => <line key={i} x1="0" y1={y} x2={W} y2={y} stroke="rgba(255,255,255,.05)" strokeWidth="1" />)}
-        {area ? <path d={area} fill="url(#odinline-a)" /> : null}
-        {line ? <path d={line} fill="none" stroke="#cfcfcf" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /> : null}
-        {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="2.3" fill="#7a7a7a" />)}
-        {pts.length ? <circle cx={tip[0]} cy={tip[1]} r="4" fill="#fafafa" /> : null}
-      </svg>
-    </div>
   )
 }
 
@@ -111,6 +56,7 @@ export default function Odin() {
     const t = setTimeout(() => setReady(true), 620); return () => clearTimeout(t)
   }, [])
   const [done, setDone] = useStore('odin:done', {})
+  const [pacing, setPacing] = useStore('odin:pacing', 1)
   const [selDay, setSelDay] = useState(null)
   const [page, setPage] = useState(0)
   const swipeX = useRef(0)
@@ -121,17 +67,26 @@ export default function Odin() {
   const toggle = (r) => setDone((s) => { const n = { ...s }; if (n[r.key]) delete n[r.key]; else n[r.key] = new Date().toISOString(); return n })
   const markDay = (rows, complete) => setDone((s) => { const n = { ...s }; rows.forEach((r) => { if (complete) n[r.key] = new Date().toISOString(); else delete n[r.key] }); return n })
 
+  // Pacing: map each unit index (1-based) to a plan-day number.
+  // pacing=1: Day 1,2,3,...  pacing=2: Day 1,1,2,2,...  pacing=3: Day 1,1,1,2,2,2,...
+  const p = Math.max(1, Math.min(3, pacing || 1))
+  const planDay = (unitN) => Math.ceil(unitN / p)
+  const planDayCount = planDay(total)
+  const dayLabel = (unitN) => unitN ? `Day ${planDay(unitN)}` : ''
+
   const curIdx = useMemo(() => currentDayIndex(days, done), [days, done])
   // Date-based schedule with 2 days of work each Sat/Sun (weekend-double).
-  const sched = useMemo(() => scheduleInfo('full-stack', total), [total])
-  const focusDay = Math.min(sched.todayN || curIdx, total)
-  const isToday = (n) => sched.todaySet.has(n)
-  const dayLabel = (n) => {
-    const dt = sched.dates[n - 1]
-    if (n > 1 && sched.dates[n - 2] === dt) return `${fmtDate(dt)} ②`
-    if (n < total && sched.dates[n] === dt) return `${fmtDate(dt)} ①`
-    return fmtDate(dt)
-  }
+  const sched = useMemo(() => scheduleInfo('full-stack', planDayCount), [planDayCount])
+  // Map schedule's todayN (plan-day) back to a unit index for focusing.
+  const focusDay = (() => {
+    if (sched.todayN) {
+      // First unit of this plan-day
+      const first = (sched.todayN - 1) * p + 1
+      return Math.min(first, total)
+    }
+    return Math.min(curIdx, total)
+  })()
+  const isToday = (n) => sched.todaySet.has(planDay(n))
   const active = selDay && selDay <= total ? selDay : focusDay
   useEffect(() => { setPage(Math.floor((active - 1) / PAGE)) }, [active])
   const goDay = (delta) => setSelDay((prev) => { const cur = prev && prev <= total ? prev : focusDay; return Math.min(total, Math.max(1, cur + delta)) })
@@ -148,14 +103,13 @@ export default function Odin() {
   const { done: doneCount, pct } = odinPct(done)
   const cstats = courseStats(done)
   const doneDays = days.filter((rows) => rows.every((r) => done[r.key])).length
-  const remaining = total - doneDays
+  const donePlanDays = planDay(doneDays)
+  const remaining = planDayCount - donePlanDays
   const allComplete = doneCount >= ODIN_ITEMS.length
-  const behind = Math.max(0, sched.due - doneDays)
-  const ahead = Math.max(0, doneDays - sched.due)
+  const behind = Math.max(0, sched.due - donePlanDays)
+  const ahead = Math.max(0, donePlanDays - sched.due)
   const paceText = allComplete ? 'Complete' : behind ? `${behind}d behind` : ahead ? `${ahead}d ahead` : 'On track'
   const paceCls = allComplete ? 'ok' : behind ? 'late' : ahead ? 'ok' : 'ontrack'
-  const estFinish = sched.finishISO ? new Date(sched.finishISO + 'T00:00') : new Date(Date.now() + remaining * 86400000)
-
   useEffect(() => { writeOdinStats(done) }, [done])
 
   const activeRows = days[active - 1]
@@ -179,7 +133,7 @@ export default function Odin() {
           <div className="rk-stat-body">
             <SmallRing pct={pct} size={92} stroke={9} />
             <div className="rk-stat-info">
-              <div className="cs-head-day">{fmtDate(sched.dates[focusDay - 1])} <span>/ {total} days</span></div>
+              <div className="cs-head-day">{dayLabel(focusDay)} <span>/ {planDayCount} days</span></div>
               <div className="cs-head-sub">{doneCount} of {ODIN_ITEMS.length} items · {ODIN_TOTAL_HOURS}h</div>
               <span className={`rpace ${paceCls}`}>{paceText}</span>
             </div>
@@ -193,9 +147,14 @@ export default function Odin() {
               </div>
             ))}
           </div>
-          <div className="rk-finish">{doneCount >= ODIN_ITEMS.length ? 'Path complete — you did it.' : <>Est. finish <b>{estFinish.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</b> · {remaining} day{remaining === 1 ? '' : 's'} left</>}</div>
+          <div className="rk-finish">{doneCount >= ODIN_ITEMS.length ? 'Path complete — you did it.' : <>{remaining} day{remaining === 1 ? '' : 's'} left</>}</div>
         </div>
-        <Consistency />
+        <div className="cs-box cs-box-pace">
+          <div className="cs-pace">
+            <div className="cs-pace-l"><span className="cs-pace-t">Daily pace</span><span className="cs-pace-s">{p === 1 ? '1 unit/day' : `${p} units/day`} · finishes in {planDayCount} days</span></div>
+            <Segmented value={p} onChange={setPacing} options={[1, 2, 3].map((v) => ({ value: v, label: `${v}` }))} />
+          </div>
+        </div>
       </aside>
 
       <main className="cs-col cs-col-center reveal">
@@ -207,7 +166,7 @@ export default function Odin() {
             <button className="cs-nav-arrow" onClick={() => goDay(-1)} disabled={active <= 1} aria-label="Previous day">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
             </button>
-            <span className="cs-detail-eye">{isToday(active) ? 'Today · ' : ''}{fmtDateFull(sched.dates[active - 1])}{sched.dates[active - 1] && (sched.dates[active - 2] === sched.dates[active - 1] || sched.dates[active] === sched.dates[active - 1]) ? ' · session ' + (sched.dates[active - 2] === sched.dates[active - 1] ? '2' : '1') : ''}</span>
+            <span className="cs-detail-eye">{isToday(active) ? 'Today · ' : ''}{dayLabel(active)}</span>
             <button className="cs-nav-arrow" onClick={() => goDay(1)} disabled={active >= total} aria-label="Next day">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
             </button>
@@ -263,7 +222,7 @@ export default function Odin() {
 
       <aside className="cs-col cs-col-right reveal">
         <div className="cs-window">
-          <div className="cs-window-h">Full path · {total} days</div>
+          <div className="cs-window-h">Full path · {planDayCount} days</div>
           <div className="cs-window-scroll">
             <div className="cs-cellgrid">
               {slice.map((rows, i) => {

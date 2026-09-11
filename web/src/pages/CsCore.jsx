@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase.js'
 import { useStore, setStore } from '../lib/store.js'
 import { PACE_OPTIONS, DEFAULT_PACE, PACE_LABEL, makeRowMins, packInterleaved, dayMinutes, currentDayIndex, fmtDuration } from '../lib/csplan.js'
 import { activityRange } from '../lib/progress.js'
-import { scheduleInfo, fmtDate, fmtDateFull } from '../lib/schedule.js'
+import { scheduleInfo } from '../lib/schedule.js'
 
 const SUBJECT_ORDER = ['Operating Systems', 'Computer Networks', 'DBMS']
 const SHORT = { 'Operating Systems': 'OS', 'Computer Networks': 'CN', DBMS: 'DBMS' }
@@ -323,7 +323,7 @@ export default function CsCore() {
   const doneDays = days.filter((rs) => rs.length && rs.every((r) => isDone(r.id))).length
   const remaining = Math.max(0, days.length - doneDays)
   const isToday = (n) => !allComplete && cal.todaySet.has(n)
-  const dayLabel = (n) => fmtDate(cal.dates[n - 1])
+  const dayLabel = (n) => n ? `Day ${n}` : ''
   const behind = Math.max(0, cal.due - doneDays)
   const ahead = Math.max(0, doneDays - cal.due)
   const paceText = allComplete ? 'Complete' : behind ? `${behind}d behind` : ahead ? `${ahead}d ahead` : 'On track'
@@ -363,7 +363,7 @@ export default function CsCore() {
               <div className="cs-box-plancenter">
                 <ConcentricRings rings={rings} center={<><b>{pct}%</b><i>done</i></>} />
                 <div className="cs-panel-info">
-                  <div className="cs-head-day">{fmtDate(cal.dates[focusDay - 1])} <span>/ {days.length} days</span></div>
+                  <div className="cs-head-day">{dayLabel(focusDay)} <span>/ {days.length} days</span></div>
                   <div className="cs-head-sub">{doneCount} of {total} topics · {remaining === 0 ? "all caught up" : `${remaining} days left`}</div>
                   <span className={`rpace ${paceCls}`} style={{ marginTop: 6 }}>{paceText}</span>
                   <div className="cs-legend">
@@ -398,7 +398,7 @@ export default function CsCore() {
                   <button className="cs-nav-arrow" onClick={() => goDay(-1)} disabled={active <= 1} aria-label="Previous day">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
                   </button>
-                  <span className="cs-detail-eye">{isToday(active) ? "Today · " : ""}{fmtDateFull(cal.dates[active - 1])}</span>
+                  <span className="cs-detail-eye">{isToday(active) ? "Today · " : ""}{dayLabel(active)}</span>
                   <button className="cs-nav-arrow" onClick={() => goDay(1)} disabled={active >= days.length} aria-label="Next day">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
                   </button>

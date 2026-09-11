@@ -173,26 +173,20 @@ export function cumulativeSeries(days = 30) {
 }
 
 export function sectionsSummary() {
-  const sd = readingStats('system-design'), m = readingStats('math'), h = readingStats('handson')
+  const sd = readingStats('system-design')
   const cs = getStore('cs:stats', { done: 0, total: 0, pct: 0 })
   return [
     { key: 'System Design', done: sd.done, total: sd.total, pct: sd.pct, color: '#a77bff' },
-    { key: 'Math for ML', done: m.done, total: m.total, pct: m.pct, color: '#6f9bff' },
-    { key: 'Hands-On ML', done: h.done, total: h.total, pct: h.pct, color: '#4fd3df' },
     { key: 'CS Core', done: cs.done, total: cs.total || 46, pct: cs.pct, color: '#5fe3b6' },
   ]
 }
 
 // Home heatmap: date -> number of distinct tracks active that day (1..5), among
-// DSA, CS Core, ML·Quant, System Design, Full Stack. Used as the 5 heat levels.
+// DSA, CS Core, System Design, Full Stack. Used as the 5 heat levels.
 export function activitySectionLevels() {
   const map = {}
   const add = (iso, sec) => { if (!iso) return; (map[iso] = map[iso] || new Set()).add(sec) }
   Object.values(getStore('read:system-design', { done: {} }).done || {}).forEach((ts) => { if (typeof ts === 'string') add(ts.slice(0, 10), 'SD') })
-  ;['math', 'handson'].forEach((pid) => {
-    Object.values(getStore(`read:${pid}`, { done: {} }).done || {}).forEach((ts) => { if (typeof ts === 'string') add(ts.slice(0, 10), 'ML') })
-  })
-  getStore('col:quant', []).forEach((x) => add(new Date(x.created || Date.now()).toISOString().slice(0, 10), 'ML'))
   getStore('col:dsa', []).forEach((x) => add(x.date || (x.created ? new Date(x.created).toISOString().slice(0, 10) : null), 'DSA'))
   Object.values(getStore('cs:done', {})).forEach((ts) => { if (typeof ts === 'string') add(ts.slice(0, 10), 'CS') })
   Object.values(getStore('odin:done', {})).forEach((ts) => { if (typeof ts === 'string') add(ts.slice(0, 10), 'FS') })
@@ -204,9 +198,9 @@ export function activitySectionLevels() {
 
 export function entriesForDate(iso) {
   const out = []
-  const NAMES = { 'system-design': 'System Design', math: 'Math for ML', handson: 'Hands-On ML' }
-  const TO = { 'system-design': '/system-design', math: '/ml-quant', handson: '/ml-quant' }
-  ;['system-design', 'math', 'handson'].forEach((pid) => {
+  const NAMES = { 'system-design': 'System Design' }
+  const TO = { 'system-design': '/system-design' }
+  ;['system-design'].forEach((pid) => {
     const st = getStore(`read:${pid}`, { done: {} })
     Object.entries(st.done || {}).forEach(([n, ts]) => {
       if (String(ts).slice(0, 10) === iso) out.push({ kind: 'Reading', label: `${NAMES[pid]} · Day ${n}`, to: TO[pid] })

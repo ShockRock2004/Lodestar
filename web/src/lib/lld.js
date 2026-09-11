@@ -1,8 +1,9 @@
-// Low Level Design — 46-day plan (Oct 1 → Nov 15, 2026).
-// THEORY (Oct 1–31): every lesson from the AlgoMaster LLD course in its EXACT course order,
-//   from Course Introduction through the "LLD Interview Tips" module (algomaster.io/learn/lld).
-// QUESTIONS (Nov 1–15): all 33 problems from github.com/ashishps1/awesome-low-level-design, 2/day
-//   (three light days carry a 3rd) — clustered by theme, warm-ups first, hardest last.
+// Low Level Design — 35-day plan (Oct 1 → Nov 4, 2026).
+// THEORY (Oct 1–24): every lesson from the AlgoMaster LLD course in its EXACT course order,
+//   from Course Introduction through the "LLD Interview Tips" module (algomaster.io/learn/lld),
+//   packed to ~3 lessons/day so the course fits in 24 days instead of 31.
+// QUESTIONS (Oct 25–Nov 4): all 33 problems from github.com/ashishps1/awesome-low-level-design,
+//   3/day flat (33 / 3 = 11 days) — clustered by theme, warm-ups first, hardest last.
 import { setStore } from './store.js'
 
 const A = (s) => `https://algomaster.io/learn/lld/${s}`
@@ -20,7 +21,7 @@ const Q = (n, title, focus, tag, probs) => ({
 })
 
 export const LLD_DAYS = [
-  // ── THEORY · exact AlgoMaster course order (Oct 1–31) ──
+  // ── THEORY · exact AlgoMaster course order, packed to 24 days (Oct 1–24) ──
   T(1, 'OOP Foundations', 'Course Intro & LLD Basics', 'What LLD is and how it’s tested.', [
     ['Course Introduction', 'course-introduction'], ['Course Roadmap', 'course-roadmap'], ['What is LLD?', 'what-is-lld'],
   ]),
@@ -36,136 +37,110 @@ export const LLD_DAYS = [
   T(5, 'OOP Foundations', 'OOP · Inheritance & Polymorphism', 'Reuse and substitutability.', [
     ['Inheritance', 'inheritance'], ['Polymorphism', 'polymorphism'],
   ]),
-  T(6, 'OOP Foundations', 'Class Relationships I', 'Model "has-a" vs "owns-a" correctly.', [
+  T(6, 'OOP Foundations', 'Class Relationships I & II', 'Model "has-a" vs "owns-a"; dependencies and realization.', [
     ['Association', 'association'], ['Aggregation', 'aggregation'], ['Composition', 'composition'],
-  ]),
-  T(7, 'OOP Foundations', 'Class Relationships II', 'Dependencies and realization.', [
     ['Dependency', 'dependency'], ['Realization', 'realization'],
   ]),
-  T(8, 'Design Principles', 'Principles · DRY, KISS, YAGNI', 'Keep designs lean.', [
+  T(7, 'Design Principles', 'Principles · DRY, KISS, YAGNI', 'Keep designs lean.', [
     ['DRY Principle', 'dry'], ['KISS Principle', 'kiss'], ['YAGNI Principle', 'yagni'],
   ]),
-  T(9, 'Design Principles', 'Principles · Demeter & SoC', 'Loose coupling by construction.', [
+  T(8, 'Design Principles', 'Principles · Demeter, SoC, Coupling & Composing', 'Loose coupling by construction.', [
     ['Law of Demeter', 'lod'], ['Separation of Concerns', 'soc'],
-  ]),
-  T(10, 'Design Principles', 'Principles · Coupling & Composing', 'Cohesion, coupling, composition-over-inheritance.', [
     ['Coupling and Cohesion', 'coupling-and-cohesion'], ['Composing Objects Principle', 'composing-objects'],
   ]),
-  T(11, 'Design Principles', 'SOLID I — SRP & OCP', 'The two that drive most decisions.', [
+  T(9, 'Design Principles', 'SOLID I — SRP & OCP', 'The two that drive most decisions.', [
     ['Single Responsibility Principle', 'srp'], ['Open/Closed Principle', 'ocp'],
   ]),
-  T(12, 'Design Principles', 'SOLID II — LSP, ISP, DIP', 'Substitutability, lean interfaces, inversion.', [
+  T(10, 'Design Principles', 'SOLID II — LSP, ISP, DIP', 'Substitutability, lean interfaces, inversion.', [
     ['Liskov Substitution Principle', 'lsp'], ['Interface Segregation Principle', 'isp'], ['Dependency Inversion Principle', 'dip'],
   ]),
-  T(13, 'UML & Patterns', 'UML I · Class & Use Case', 'Draw the design.', [
+  T(11, 'UML & Patterns', 'UML I · Class & Use Case', 'Draw the design.', [
     ['Class Diagram', 'class-diagram'], ['Use Case Diagram', 'use-case-diagram'],
   ]),
-  T(14, 'UML & Patterns', 'UML II · Sequence, Activity, State', 'Behavior over time.', [
+  T(12, 'UML & Patterns', 'UML II · Sequence, Activity, State', 'Behavior over time.', [
     ['Sequence Diagram', 'sequence-diagram'], ['Activity Diagram', 'activity-diagram'], ['State Machine Diagram', 'state-machine-diagram'],
   ]),
-  T(15, 'UML & Patterns', 'Patterns · Intro + Singleton', 'Design patterns begin.', [
+  T(13, 'UML & Patterns', 'Patterns · Intro + Singleton', 'Design patterns begin.', [
     ['Intro to Design Patterns', 'design-patterns'], ['Singleton', 'singleton', 'pattern'],
   ]),
-  T(16, 'UML & Patterns', 'Creational · Builder & Factory Method', 'Constructing objects.', [
+  T(14, 'UML & Patterns', 'Creational · Builder, Factory, Abstract Factory, Prototype', 'Constructing objects and families of them.', [
     ['Builder', 'builder', 'pattern'], ['Factory Method', 'factory-method', 'pattern'],
-  ]),
-  T(17, 'UML & Patterns', 'Creational · Abstract Factory & Prototype', 'Families and clones.', [
     ['Abstract Factory', 'abstract-factory', 'pattern'], ['Prototype', 'prototype', 'pattern'],
   ]),
-  T(18, 'UML & Patterns', 'Structural · Adapter & Facade', 'Interfaces and simplification.', [
+  T(15, 'UML & Patterns', 'Structural I · Adapter, Facade, Decorator, Composite', 'Interfaces, simplification, wrapping, trees.', [
     ['Adapter', 'adapter', 'pattern'], ['Facade', 'facade', 'pattern'],
-  ]),
-  T(19, 'UML & Patterns', 'Structural · Decorator & Composite', 'Wrapping and trees.', [
     ['Decorator', 'decorator', 'pattern'], ['Composite', 'composite', 'pattern'],
   ]),
-  T(20, 'UML & Patterns', 'Structural · Proxy & Bridge', 'Access control and decoupling.', [
+  T(16, 'UML & Patterns', 'Structural II · Proxy, Bridge, Flyweight, Strategy', 'Access control, decoupling, shared state, swappable algorithms.', [
     ['Proxy', 'proxy', 'pattern'], ['Bridge', 'bridge', 'pattern'],
-  ]),
-  T(21, 'UML & Patterns', 'Structural/Behavioral · Flyweight & Strategy', 'Sharing state; swappable algorithms.', [
     ['Flyweight', 'flyweight', 'pattern'], ['Strategy', 'strategy', 'pattern'],
   ]),
-  T(22, 'UML & Patterns', 'Behavioral · Iterator & Observer', 'Traversal and notifications.', [
+  T(17, 'UML & Patterns', 'Behavioral I · Iterator, Observer, Command, State', 'Traversal, notifications, requests as objects, state machines.', [
     ['Iterator', 'iterator', 'pattern'], ['Observer', 'observer', 'pattern'],
-  ]),
-  T(23, 'UML & Patterns', 'Behavioral · Command & State', 'Requests as objects; state machines.', [
     ['Command', 'command', 'pattern'], ['State', 'state', 'pattern'],
   ]),
-  T(24, 'UML & Patterns', 'Behavioral · Template Method & CoR', 'Skeletons and handler chains.', [
+  T(18, 'UML & Patterns', 'Behavioral II · Template Method & CoR', 'Skeletons and handler chains.', [
     ['Template Method', 'template-method', 'pattern'], ['Chain of Responsibility', 'chain-of-responsibility', 'pattern'],
   ]),
-  T(25, 'UML & Patterns', 'Behavioral · Visitor, Mediator, Memento', 'Operations, coordination, undo.', [
+  T(19, 'UML & Patterns', 'Behavioral III · Visitor, Mediator, Memento', 'Operations, coordination, undo.', [
     ['Visitor', 'visitor', 'pattern'], ['Mediator', 'mediator', 'pattern'], ['Memento', 'memento', 'pattern'],
   ]),
-  T(26, 'UML & Patterns', 'Additional · Null Object, Repository, MVC', 'Everyday architectural patterns.', [
+  T(20, 'UML & Patterns', 'Additional · Null Object, Repository, MVC, DI, Specification', 'Everyday architectural patterns and composable rules.', [
     ['Null Object', 'null-object', 'pattern'], ['Repository', 'repository', 'pattern'], ['MVC', 'mvc', 'pattern'],
-  ]),
-  T(27, 'UML & Patterns', 'Additional · DI & Specification', 'Injection and composable rules.', [
     ['Dependency Injection', 'dependency-injection', 'pattern'], ['Specification', 'specification', 'pattern'],
   ]),
-  T(28, 'UML & Patterns', 'Additional · Game Loop & Concurrency', 'Loops, pools, producer–consumer.', [
+  T(21, 'UML & Patterns', 'Additional · Game Loop & Concurrency', 'Loops, pools, producer–consumer.', [
     ['Game Loop', 'game-loop', 'pattern'], ['Thread Pool', 'thread-pool', 'pattern'], ['Producer Consumer', 'producer-consumer', 'pattern'],
   ]),
-  T(29, 'Interview Tips', 'Approaching Interviews', 'The OOD & machine-coding playbooks.', [
+  T(22, 'Interview Tips', 'Approaching Interviews', 'The OOD & machine-coding playbooks.', [
     ['How to approach OOD Interviews', 'ood-approach'], ['How to approach Machine Coding Interviews', 'machine-coding-approach'],
   ]),
-  T(30, 'Interview Tips', 'Modeling & Clean Code', 'Find entities; write clean code.', [
+  T(23, 'Interview Tips', 'Modeling & Clean Code', 'Find entities; write clean code.', [
     ['How to Identify Entities & Model Relationships', 'identifying-entities'], ['How to write Clean Code', 'writing-clean-code'],
   ]),
-  T(31, 'Interview Tips', 'Patterns & Concurrency', 'Choosing patterns; handling concurrency.', [
+  T(24, 'Interview Tips', 'Patterns & Concurrency', 'Choosing patterns; handling concurrency.', [
     ['How to choose Design Patterns', 'choosing-design-patterns'], ['How to handle Concurrency Scenarios', 'handling-concurrency'],
   ]),
 
-  // ── QUESTIONS · all 33, 2/day (three light days carry a 3rd) (Nov 1–15) ──
-  Q(32, 'State-machine warm-ups', 'Cleanest State-pattern demonstrations.', 'ALL', [
+  // ── QUESTIONS · all 33, 3/day flat (33 / 3 = 11 days) (Oct 25–Nov 4) ──
+  Q(25, 'State-machine warm-ups', 'Cleanest State-pattern demonstrations.', null, [
     ['Vending Machine', 'vending-machine', 1], ['Coffee Vending Machine', 'coffee-vending-machine', 1], ['Traffic Signal Control System', 'traffic-signal', 1],
   ]),
-  Q(33, 'State + data structures', 'Transaction state; HashMap + DLL.', null, [
-    ['ATM', 'atm'], ['LRU Cache', 'lru-cache'],
+  Q(26, 'State, data structures & patterns', 'Transaction state, HashMap + DLL, CoR in the wild.', null, [
+    ['ATM', 'atm'], ['LRU Cache', 'lru-cache'], ['Logging Framework', 'logging-framework', 1],
   ]),
-  Q(34, 'Patterns in practice', 'CoR, Observer & Strategy in the wild.', 'ALL', [
-    ['Logging Framework', 'logging-framework', 1], ['Pub Sub System', 'pub-sub-system'], ['Task Management System', 'task-management-system', 1],
+  Q(27, 'Patterns + simple games', 'Observer & Strategy in the wild; board modeling begins.', null, [
+    ['Pub Sub System', 'pub-sub-system'], ['Task Management System', 'task-management-system', 1], ['Tic Tac Toe', 'tic-tac-toe'],
   ]),
-  Q(35, 'Simple games', 'Board modeling + rules.', null, [
-    ['Tic Tac Toe', 'tic-tac-toe'], ['Snake and Ladder', 'snake-and-ladder'],
+  Q(28, 'Games & complex state', 'Board rules, then a rules engine and dispatch.', null, [
+    ['Snake and Ladder', 'snake-and-ladder'], ['Chess Game', 'chess-game', 2], ['Elevator System', 'elevator-system'],
   ]),
-  Q(36, 'Complex state & scheduling', 'Rules engines and dispatch.', null, [
-    ['Chess Game', 'chess-game', 2], ['Elevator System', 'elevator-system'],
+  Q(29, 'Allocation & booking', 'The canonical warm-up, reuse, and rich reservation entities.', null, [
+    ['Parking Lot', 'parking-lot'], ['Car Rental System', 'car-rental-system'], ['Hotel Management System', 'hotel-management-system'],
   ]),
-  Q(37, 'Allocation & reservation', 'The canonical warm-up + reuse.', null, [
-    ['Parking Lot', 'parking-lot'], ['Car Rental System', 'car-rental-system'],
+  Q(30, 'Booking, catalog & seat maps', 'Inventory-heavy systems and seat reservation.', null, [
+    ['Library Management System', 'library-management-system'], ['Stack Overflow', 'stack-overflow', 1], ['Airline Management System', 'airline-management-system'],
   ]),
-  Q(38, 'Booking & modeling', 'Reservation, inventory, rich entities.', 'ALL', [
-    ['Hotel Management System', 'hotel-management-system'], ['Library Management System', 'library-management-system'], ['Stack Overflow', 'stack-overflow', 1],
+  Q(31, 'Seat reservation + concurrency', 'Seat maps and the double-booking stress test.', null, [
+    ['Concert Ticket Booking System', 'concert-ticket-booking-system'], ['Movie Ticket Booking System', 'movie-ticket-booking-system', 2], ['Restaurant Management System', 'restaurant-management-system'],
   ]),
-  Q(39, 'Seat reservation', 'Inventory + seat maps.', null, [
-    ['Airline Management System', 'airline-management-system'], ['Concert Ticket Booking System', 'concert-ticket-booking-system'],
+  Q(32, 'Contention, bidding & social', 'Constraints, concurrent bids, and a social graph.', null, [
+    ['Course Registration System', 'course-registration-system', 2], ['Online Auction System', 'online-auction-system'], ['LinkedIn', 'linkedin', 2],
   ]),
-  Q(40, 'Reservation + concurrency', 'The double-booking stress test.', null, [
-    ['Movie Ticket Booking System', 'movie-ticket-booking-system', 2], ['Restaurant Management System', 'restaurant-management-system'],
+  Q(33, 'Social & feeds at scale', 'Connections, reputation, live updates and observers.', null, [
+    ['Social Network (Facebook)', 'social-networking-service', 2], ['CricInfo', 'cricinfo', 2], ['Splitwise', 'splitwise', 2],
   ]),
-  Q(41, 'Contention & bidding', 'Constraints and concurrent bids.', null, [
-    ['Course Registration System', 'course-registration-system', 2], ['Online Auction System', 'online-auction-system'],
+  Q(34, 'Money & marketplace', 'Core fintech interview problems, then cart/catalog.', 'FINANCE', [
+    ['Digital Wallet Service', 'digital-wallet-service', 2], ['Online Stock Brokerage System', 'online-stock-brokerage-system', 2], ['Online Shopping System (Amazon)', 'online-shopping-service', 2],
   ]),
-  Q(42, 'Social & reputation', 'Users, connections, reputation.', null, [
-    ['LinkedIn', 'linkedin', 2], ['Social Network (Facebook)', 'social-networking-service', 2],
-  ]),
-  Q(43, 'Feeds at scale', 'Live updates and observers.', null, [
-    ['CricInfo', 'cricinfo', 2], ['Splitwise', 'splitwise', 2],
-  ]),
-  Q(44, 'Money & ledgers', 'Core fintech interview problems.', 'FINANCE', [
-    ['Digital Wallet Service', 'digital-wallet-service', 2], ['Online Stock Brokerage System', 'online-stock-brokerage-system', 2],
-  ]),
-  Q(45, 'Marketplace & matching', 'Cart/catalog + rider matching.', 'FAANG', [
-    ['Online Shopping System (Amazon)', 'online-shopping-service', 2], ['Ride-Sharing Service (Uber)', 'ride-sharing-service', 2],
-  ]),
-  Q(46, 'Real-time capstone', 'Dispatch and streaming at scale.', 'FAANG', [
-    ['Online Food Delivery (Swiggy)', 'food-delivery-service', 2], ['Music Streaming (Spotify)', 'music-streaming-service', 2],
+  Q(35, 'Real-time capstone', 'Rider matching, dispatch and streaming at scale.', 'FAANG', [
+    ['Ride-Sharing Service (Uber)', 'ride-sharing-service', 2], ['Online Food Delivery (Swiggy)', 'food-delivery-service', 2], ['Music Streaming (Spotify)', 'music-streaming-service', 2],
   ]),
 ]
 
 export const LLD_PHASES = ['OOP Foundations', 'Design Principles', 'UML & Patterns', 'Interview Tips', 'Questions']
 export const LLD_START = '2026-10-01'
-export const LLD_END = '2026-11-15'
+export const LLD_END = '2026-11-04'
 export const LLD_TOTAL_DAYS = LLD_DAYS.length
 export const LLD_ALL_ITEMS = LLD_DAYS.flatMap((d) => d.items)
 export const LLD_TOTAL_ITEMS = LLD_ALL_ITEMS.length

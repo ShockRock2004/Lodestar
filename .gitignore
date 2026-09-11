@@ -1,4 +1,4 @@
-# ── Lodestar monorepo — root ignores (web/ and app/ also have their own) ──
+# ── Lodestar — root ignores (web/ also has its own) ──
 
 # Claude Code local state
 .claude/
@@ -7,7 +7,7 @@
 node_modules/
 **/node_modules/
 
-# env files — never commit (the app's EXPO_PUBLIC_* keys still ship inside the built APK)
+# env files — never commit
 .env
 .env.*
 !.env.example
@@ -15,12 +15,6 @@ node_modules/
 # build output
 web/dist/
 web/dist-ssr/
-app/dist/
-app/.expo/
-
-# generated native projects (recreated by `expo prebuild`)
-app/android/
-app/ios/
 
 # logs / OS
 *.log

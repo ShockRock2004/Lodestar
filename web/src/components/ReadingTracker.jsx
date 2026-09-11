@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useReading, activityRange } from '../lib/progress.js'
-import { isScheduled, scheduleInfo, fmtDate, fmtDateFull } from '../lib/schedule.js'
+import { isScheduled, scheduleInfo } from '../lib/schedule.js'
 import { SmallRing } from './ui.jsx'
 
 const RK_PAGE = 12
@@ -98,7 +98,7 @@ export default function ReadingTracker({ planId, chapterFocus = false }) {
   const info = useMemo(() => (sched ? scheduleInfo(planId, total) : null), [sched, planId, total])
   const focusDay = sched ? Math.min(info.todayN, total) : Math.min(currentDay, total)
   const isTodayN = (n) => (sched ? info.todaySet.has(n) : n === currentDay)
-  const dayLabel = (n) => (sched ? fmtDate(info.dates[n - 1]) : `Day ${n}`)
+  const dayLabel = (n) => n ? `Day ${n}` : ''
   const [selDay, setSelDay] = useState(null)
   const [page, setPage] = useState(0)
   const swipeX = useRef(0)
@@ -132,7 +132,6 @@ export default function ReadingTracker({ planId, chapterFocus = false }) {
   const cgIdx = curGroup ? curGroup.days.findIndex((d) => d.n === curDayObj.n) + 1 : 0
   const chapterNo = curGroup ? groups.findIndex((g) => g.name === curGroup.name) + 1 : 0
   const remaining = total - doneCount
-  const estFinish = sched && info.finishISO ? new Date(info.finishISO + 'T00:00') : new Date(Date.now() + remaining * 86400000)
   const activeDay = days[active - 1]
   const dayPages = activeDay.to - activeDay.from + 1
   const readMins = Math.max(5, Math.round(dayPages * 2))
@@ -157,7 +156,7 @@ export default function ReadingTracker({ planId, chapterFocus = false }) {
               <span className="rk-vol-bar rk-curchap-bar"><i style={{ width: cgPct + '%' }} /></span>
               <span className="rk-curchap-p">{cgPct}%</span>
             </div>
-            <div className="rk-finish">{finished ? 'Plan complete — nicely done.' : <>Est. finish <b>{estFinish.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</b> · {remaining} day{remaining === 1 ? '' : 's'} left</>}</div>
+            <div className="rk-finish">{finished ? 'Plan complete — nicely done.' : <>{remaining} day{remaining === 1 ? '' : 's'} left</>}</div>
           </div>
         ) : (
           <div className="cs-box rk-stats">
@@ -165,7 +164,7 @@ export default function ReadingTracker({ planId, chapterFocus = false }) {
             <div className="rk-stat-body">
               <SmallRing pct={pct} size={92} stroke={9} />
               <div className="rk-stat-info">
-                <div className="cs-head-day">{sched ? fmtDate(info.dates[focusDay - 1]) : `Day ${focusDay}`} <span>/ {total} days</span></div>
+                <div className="cs-head-day">{dayLabel(focusDay)} <span>/ {total} days</span></div>
                 <div className="cs-head-sub">{doneCount} of {total} days done</div>
                 <span className={`rpace ${paceCls}`}>{paceText}{finished ? '' : ` · target ${expectedDay}`}</span>
               </div>
@@ -183,7 +182,7 @@ export default function ReadingTracker({ planId, chapterFocus = false }) {
                 )
               })}
             </div>
-            <div className="rk-finish">{finished ? 'Plan complete — nicely done.' : <>Est. finish <b>{estFinish.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</b> · {remaining} day{remaining === 1 ? '' : 's'} left</>}</div>
+            <div className="rk-finish">{finished ? 'Plan complete — nicely done.' : <>{remaining} day{remaining === 1 ? '' : 's'} left</>}</div>
           </div>
         )}
         <ReadingConsistency />
@@ -198,7 +197,7 @@ export default function ReadingTracker({ planId, chapterFocus = false }) {
             <button className="cs-nav-arrow" onClick={() => goDay(-1)} disabled={active <= 1} aria-label="Previous day">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
             </button>
-            <span className="cs-detail-eye">{isTodayN(active) ? 'Today · ' : ''}{sched ? fmtDateFull(info.dates[active - 1]) : `Day ${active} of ${total}`}</span>
+            <span className="cs-detail-eye">{isTodayN(active) ? 'Today · ' : ''}{dayLabel(active)}</span>
             <button className="cs-nav-arrow" onClick={() => goDay(1)} disabled={active >= total} aria-label="Next day">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
             </button>
