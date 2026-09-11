@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { IconBack, TechLogo, TECH_LABEL } from '../components/icons.jsx'
 import { SmallRing, Segmented } from '../components/ui.jsx'
 import { useStore } from '../lib/store.js'
-import { activityRange } from '../lib/progress.js'
 import { scheduleInfo } from '../lib/schedule.js'
 import {
   ODIN_ITEMS, ODIN_COURSE_ORDER, ODIN_TOTAL_HOURS, ODIN_PACE,
@@ -12,66 +11,12 @@ import {
 
 const PAGE = 12
 const SHORT = { Foundations: 'FND', 'Intermediate HTML and CSS': 'HTML', JavaScript: 'JS', 'Advanced HTML and CSS': 'ADV', React: 'RCT', Databases: 'DB', NodeJS: 'NODE', 'Getting Hired': 'HIRE' }
-const RANGES = [{ k: 14, label: '2W' }, { k: 42, label: '6W' }, { k: 84, label: '12W' }]
 
 function Check({ done, onClick, label }) {
   return (
     <button className={done ? 'rcheck on' : 'rcheck'} onClick={onClick} aria-pressed={done} aria-label={label}>
       {done && <svg viewBox="0 0 24 24" width="14" height="14"><path d="M6 12l4 4 8-8" fill="none" stroke="#0b0b0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>}
     </button>
-  )
-}
-
-function smoothPath(pts) {
-  if (pts.length < 2) return ''
-  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2
-    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6
-    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6
-    d += `C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`
-  }
-  return d
-}
-
-function Consistency() {
-  const [ri, setRi] = useState(1)
-  const swipeX = useRef(0)
-  const range = RANGES[ri]
-  const { series, activeDays } = useMemo(() => {
-    const arr = activityRange(range.k)
-    const N = 14, size = Math.max(1, Math.ceil(arr.length / N)), series = []
-    for (let i = 0; i < arr.length; i += size) series.push(arr.slice(i, i + size).reduce((a, c) => a + c.count, 0))
-    return { series, activeDays: arr.filter((d) => d.count > 0).length }
-  }, [ri])
-  const W = 300, H = 120, pad = 8, top = 12, bot = 12
-  const max = Math.max(1, ...series)
-  const pts = series.map((v, i) => [pad + i * ((W - 2 * pad) / Math.max(1, series.length - 1)), H - bot - (v / max) * (H - top - bot)])
-  const line = smoothPath(pts)
-  const area = pts.length ? `${line} L${pts[pts.length - 1][0].toFixed(1)},${H} L${pts[0][0].toFixed(1)},${H} Z` : ''
-  const tip = pts[pts.length - 1] || [0, 0]
-  const grid = [0.25, 0.5, 0.75, 1].map((g) => H - bot - g * (H - top - bot))
-  const move = (dir) => setRi((v) => Math.min(RANGES.length - 1, Math.max(0, v + dir)))
-  return (
-    <div className="cs-box cs-box-viz"
-      onTouchStart={(e) => { swipeX.current = e.touches[0].clientX }}
-      onTouchEnd={(e) => { const dx = e.changedTouches[0].clientX - swipeX.current; if (Math.abs(dx) > 45) move(dx < 0 ? 1 : -1) }}>
-      <div className="cs-viz-headrow">
-        <span className="cs-panel-eye">Consistency</span>
-        <div className="cs-viz-ranges" role="tablist">
-          {RANGES.map((r, i) => <button key={r.k} className={'cs-range' + (i === ri ? ' on' : '')} onClick={() => setRi(i)} aria-selected={i === ri}>{r.label}</button>)}
-        </div>
-      </div>
-      <div className="cs-viz-stat">{activeDays} <em>active {activeDays === 1 ? 'day' : 'days'} · last {range.label}</em></div>
-      <svg className="cs-line" viewBox={`0 0 ${W} ${H}`} width="100%" height="120" preserveAspectRatio="none" aria-hidden="true">
-        <defs><linearGradient id="odinline-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffffff" stopOpacity="0.16" /><stop offset="1" stopColor="#ffffff" stopOpacity="0" /></linearGradient></defs>
-        {grid.map((y, i) => <line key={i} x1="0" y1={y} x2={W} y2={y} stroke="rgba(255,255,255,.05)" strokeWidth="1" />)}
-        {area ? <path d={area} fill="url(#odinline-a)" /> : null}
-        {line ? <path d={line} fill="none" stroke="#cfcfcf" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /> : null}
-        {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r="2.3" fill="#7a7a7a" />)}
-        {pts.length ? <circle cx={tip[0]} cy={tip[1]} r="4" fill="#fafafa" /> : null}
-      </svg>
-    </div>
   )
 }
 
@@ -210,7 +155,6 @@ export default function Odin() {
             <Segmented value={p} onChange={setPacing} options={[1, 2, 3].map((v) => ({ value: v, label: `${v}` }))} />
           </div>
         </div>
-        <Consistency />
       </aside>
 
       <main className="cs-col cs-col-center reveal">
