@@ -621,6 +621,10 @@ html { scroll-behavior: smooth; }
   .rk-grid .cs-col-right .cs-window { flex: 1; display: flex; flex-direction: column; }
   .rk-grid .cs-col-right .cs-window-scroll { flex: 1; display: flex; align-items: center; }
   .rk-grid .cs-col-right .cs-window-scroll .cs-cellgrid { width: 100%; }
+  /* left column's own boxes don't naturally grow with it — when the center/right
+     columns are taller than the left column's content, stretch the last left
+     box to fill the gap instead of leaving empty space below it */
+  .rk-grid .cs-col-left .cs-box:last-child { flex: 1; }
 }
 
 /* ===== Reading center: refinements (metadata, notes label, fill) ===== */
