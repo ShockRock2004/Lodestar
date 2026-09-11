@@ -6,8 +6,8 @@ import Modal from '../components/Modal.jsx'
 import CalendarCard from '../components/CalendarCard.jsx'
 import { useReading, useCollection, activityRange, entriesForDate, readingStats, activitySectionLevels } from '../lib/progress.js'
 import { getStore, useStore, todayISO } from '../lib/store.js'
-import { IconChevron, IconDsa, IconSys, IconCs, IconMl, IconOdin, IconLld, IconSql, IconChecklist } from '../components/icons.jsx'
-import { scheduleInfo, fmtDate } from '../lib/schedule.js'
+import { IconChevron, IconDsa, IconSys, IconCs, IconOdin, IconLld, IconSql, IconChecklist } from '../components/icons.jsx'
+import { scheduleInfo } from '../lib/schedule.js'
 import { LLD_TOTAL_DAYS } from '../lib/lld.js'
 import { SQL_TOTAL_DAYS } from '../lib/sql.js'
 import SwipeDeck from '../components/SwipeDeck.jsx'
@@ -84,10 +84,6 @@ function globalStreak() {
 }
 
 /* ---------- single source of truth for the day ---------- */
-// ML · Quant is paused indefinitely (2026-08-14) — its card stays on the home page
-// as a link, but it's excluded from the plan math below (overall %, today's
-// completion ring, "pick up where you left off") so it doesn't drag those down or
-// get suggested as the resume target. Mirrors AI_EXCLUDED in lib/aicontext.js.
 function useToday() {
   const sd = useReading('system-design')
   const dsa = useCollection('dsa')
@@ -105,11 +101,6 @@ function useToday() {
       key: 'sd', name: 'System Design', Icon: IconSys, pct: sd.pct, to: '/system-design',
       state: `Day ${sd.currentDay} of ${sd.total}`, late: sd.behind > 0, pace: sd.behind ? `${sd.behind}d behind` : 'On track',
       items: [{ label: 'Today’s reading', meta: sd.finished ? 'complete' : `pp. ${dayOf(sd).from}–${dayOf(sd).to}`, done: readDone(sd), toggle: () => toggleToday(sd) }],
-    },
-    {
-      key: 'ml', name: 'ML · Quant', Icon: IconMl, pct: null, to: '/ml-quant',
-      state: 'Paused', late: false, pace: null,
-      items: [],
     },
     {
       key: 'cs', name: 'CS Core', Icon: IconCs, pct: cs.pct, to: '/cs-core',
@@ -146,12 +137,12 @@ function useToday() {
   const total = allItems.length
 
   const cand = [
-    { name: 'System Design', to: '/system-design', behind: sd.behind, done: readDone(sd), obj: sd.finished ? 'Plan complete' : `${fmtDate(scheduleInfo('system-design', sd.total).dates[Math.min(sd.currentDay, sd.total) - 1])} · pp. ${dayOf(sd).from}–${dayOf(sd).to}` },
+    { name: 'System Design', to: '/system-design', behind: sd.behind, done: readDone(sd), obj: sd.finished ? 'Plan complete' : `Day ${Math.min(sd.currentDay, sd.total)} · pp. ${dayOf(sd).from}–${dayOf(sd).to}` },
     { name: 'DSA', to: '/dsa', behind: 0, done: !!dsaToday, obj: 'Log today’s LeetCode problem' },
   ]
   const resume = cand.filter((x) => !x.done).sort((a, b) => b.behind - a.behind)[0] || null
 
-  const ORDER = ['dsa', 'ml', 'cs', 'sd', 'odin', 'lld', 'sql']
+  const ORDER = ['dsa', 'cs', 'sd', 'odin', 'lld', 'sql']
   tracks.sort((a, b) => ORDER.indexOf(a.key) - ORDER.indexOf(b.key))
   const pcts = tracks.map((t) => t.pct).filter((p) => p != null)
   const overall = pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : 0
@@ -321,7 +312,6 @@ function Calendar() {
   const [openDay, setOpenDay] = useState(null)
   const heat = useMemo(() => activitySectionLevels(), [])
   const sections = openDay ? [
-    { name: 'ML', pct: Math.round((readingStats('math').pct + readingStats('handson').pct) / 2) },
     { name: 'System Design', pct: readingStats('system-design').pct },
     { name: 'CS Core', pct: getStore('cs:stats', { pct: 0 }).pct },
     { name: 'Full Stack', pct: getStore('odin:stats', { pct: 0 }).pct },

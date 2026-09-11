@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { IconBack } from '../components/icons.jsx'
 import { SmallRing } from '../components/ui.jsx'
 import { useStore } from '../lib/store.js'
-import { scheduleInfo, fmtDate, fmtDateFull } from '../lib/schedule.js'
+import { scheduleInfo } from '../lib/schedule.js'
 import {
   LLD_DAYS, LLD_TOTAL_DAYS, TYPE_LABEL,
   dayComplete, currentDayIndex, lldPct, phaseStats, doneDaysCount, writeLldStats,
@@ -42,6 +42,7 @@ export default function Lld() {
   const cal = useMemo(() => scheduleInfo('lld', total), [total])
   const focusDay = Math.min(cal.todayN || curIdx, total)
   const isToday = (n) => cal.todaySet.has(n)
+  const dayLabel = (n) => n ? `Day ${n}` : ''
   const active = selDay && selDay <= total ? selDay : focusDay
   useEffect(() => { setPage(Math.floor((active - 1) / PAGE)) }, [active])
   const goDay = (delta) => setSelDay((prev) => { const cur = prev && prev <= total ? prev : focusDay; return Math.min(total, Math.max(1, cur + delta)) })
@@ -64,7 +65,6 @@ export default function Lld() {
   const paceText = allComplete ? 'Complete' : behind ? `${behind}d behind` : ahead ? `${ahead}d ahead` : 'On track'
   const paceCls = allComplete ? 'ok' : behind ? 'late' : ahead ? 'ok' : 'ontrack'
   const remaining = total - doneDays
-  const estFinish = cal.finishISO ? new Date(cal.finishISO + 'T00:00') : new Date()
 
   useEffect(() => { writeLldStats(done) }, [done])
 
@@ -85,11 +85,11 @@ export default function Lld() {
         <div className="cs-grid3 rk-grid">
           <aside className="cs-col cs-col-left reveal">
             <div className="cs-box rk-stats">
-              <div className="cs-panel-eye">LLD interview prep · Oct 1 – Nov 15</div>
+              <div className="cs-panel-eye">LLD interview prep</div>
               <div className="rk-stat-body">
                 <SmallRing pct={pct} size={92} stroke={9} />
                 <div className="rk-stat-info">
-                  <div className="cs-head-day">{fmtDate(cal.dates[focusDay - 1])} <span>/ {total} days</span></div>
+                  <div className="cs-head-day">{dayLabel(focusDay)} <span>/ {total} days</span></div>
                   <div className="cs-head-sub">{doneDays} of {total} days · {doneItems} items done</div>
                   <span className={`rpace ${paceCls}`}>{paceText}</span>
                 </div>
@@ -103,7 +103,7 @@ export default function Lld() {
                   </div>
                 ))}
               </div>
-              <div className="rk-finish">{allComplete ? 'Plan complete — you’re interview-ready.' : <>Ends <b>{estFinish.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</b> · {remaining} day{remaining === 1 ? '' : 's'} left</>}</div>
+              <div className="rk-finish">{allComplete ? 'Plan complete — you\'re interview-ready.' : <>{remaining} day{remaining === 1 ? '' : 's'} left</>}</div>
             </div>
 
             <div className="cs-box">
@@ -129,7 +129,7 @@ export default function Lld() {
                 <button className="cs-nav-arrow" onClick={() => goDay(-1)} disabled={active <= 1} aria-label="Previous day">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
                 </button>
-                <span className="cs-detail-eye">{isToday(active) ? 'Today · ' : ''}{fmtDateFull(cal.dates[active - 1])}</span>
+                <span className="cs-detail-eye">{isToday(active) ? 'Today · ' : ''}{dayLabel(active)}</span>
                 <button className="cs-nav-arrow" onClick={() => goDay(1)} disabled={active >= total} aria-label="Next day">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
                 </button>
@@ -173,9 +173,9 @@ export default function Lld() {
                     const isDone = dayComplete(d, done)
                     const cls = 'cs-cell' + (isDone ? ' complete' : '') + (isToday(n) ? ' cs-today' : '') + (n === active ? ' sel' : '')
                     return (
-                      <button key={n} className={cls} style={{ animationDelay: `${Math.min(i * 8, 200)}ms` }} onClick={() => setSelDay(n)} aria-label={`${fmtDate(cal.dates[n - 1])}${isToday(n) ? ', today' : ''}`}>
+                      <button key={n} className={cls} style={{ animationDelay: `${Math.min(i * 8, 200)}ms` }} onClick={() => setSelDay(n)} aria-label={`${dayLabel(n)}${isToday(n) ? ', today' : ''}`}>
                         {isDone ? <span className="cs-cell-check"><svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 12l4 4 8-8" fill="none" stroke="#0b0b0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <SmallRing pct={n === active ? 100 : 0} size={26} stroke={3} showValue={false} />}
-                        <span className="cs-cell-n">{fmtDate(cal.dates[n - 1])}{notes[n] ? <i className="rk-note-dot" /> : null}</span>
+                        <span className="cs-cell-n">{dayLabel(n)}{notes[n] ? <i className="rk-note-dot" /> : null}</span>
                         <span className="cs-cell-m">{PHASE_SHORT[d.phase]}</span>
                       </button>
                     )

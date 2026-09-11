@@ -43,9 +43,8 @@ create policy "anon all dsa"       on public.dsa_problems      for all using (tr
 create policy "anon all contests"  on public.contest_reminders for all using (true) with check (true);
 
 -- ---- Everything else: a single key-value store mirrored from localStorage --------------
--- Reading progress (read:*), CS Core (cs:*), Full Stack (odin:*), the quant bank
--- (col:quant), goals and settings all sync here as jsonb blobs keyed by their store key.
--- The web app writes these; the phone app can read them the same way.
+-- Reading progress (read:*), CS Core (cs:*), Full Stack (odin:*), goals and settings
+-- all sync here as jsonb blobs keyed by their store key.
 create table if not exists public.app_state (
   key        text primary key,
   value      jsonb not null default '{}'::jsonb,

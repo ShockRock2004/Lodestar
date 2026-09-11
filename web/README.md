@@ -1,13 +1,12 @@
 # Study OS
 
-A personal study dashboard — one home for four study tracks, in a light/dark
+A personal study dashboard — one home for multiple study tracks, in a light/dark
 glassmorphism + neumorphism design (blue → cyan → green gradient signature).
 
 ## Sections
 1. **DSA** — daily LeetCode problem, notes, score log, Codeforces/CodeChef contest reminders
 2. **CS Core** — OS · Computer Networks · DBMS adaptive video curriculum
 3. **System Design** — Alex Xu Vol 1 (27d) + Vol 2 (43d) reading tracker, 10 pages/day
-4. **ML · Quant** — Mathematics for ML (Ch 4–12) + Hands-On ML (8 ch) reading, plus a daily quant question bank
 
 Cross-cutting: a fast global search, a neumorphic overall-progress gauge, and a 7-day activity chart.
 

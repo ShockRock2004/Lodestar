@@ -17,11 +17,6 @@ function streak() {
   return s
 }
 
-// Tracks the reviewer must ignore. ML · Quant is not being studied, so counting it
-// would drag every average down and invite criticism about a track that was never
-// planned. Its home card and its own page are untouched — this only scopes the review.
-export const AI_EXCLUDED = new Set(['ML · Quant'])
-
 // A scheduled track whose start date is still in the future has not begun. Its 0%
 // is the plan working as intended, not a failure, so it must never be scored or
 // criticised — Low Level Design does not start until 2026-10-01.
@@ -32,18 +27,14 @@ export const notStartedYet = (trackId) => {
 
 export function buildTracks() {
   const sd = readingStats('system-design')
-  const ma = readingStats('math')
-  const ho = readingStats('handson')
   const cs = getStore('cs:stats', { done: 0, total: 46, pct: 0 })
   const odin = getStore('odin:stats', { done: 0, total: 197, pct: 0 })
   const lld = getStore('lld:stats', { done: 0, total: 0, pct: 0, doneDays: 0 })
   const lldBehind = Math.max(0, scheduleInfo('lld', LLD_TOTAL_DAYS).due - (lld.doneDays || 0))
   const dsaToday = getStore('col:dsa', []).find((x) => x.date === todayISO())
-  const mlBehind = Math.max(ma.behind || 0, ho.behind || 0)
 
   return [
     { name: 'DSA', pct: null, state: dsaToday ? `today's problem logged (${dsaToday.title}, ${dsaToday.score}/5)` : "today's problem NOT logged", pace: 'daily practice', behind: 0 },
-    { name: 'ML · Quant', pct: Math.round((ma.pct + ho.pct) / 2), state: `Math day ${ma.currentDay}/${ma.total}, Hands-On day ${ho.currentDay}/${ho.total}`, pace: mlBehind ? `${mlBehind}d behind` : 'on track', behind: mlBehind },
     { name: 'CS Core', pct: cs.pct, state: `${cs.done} of ${cs.total || 46} topics`, pace: 'self-paced', behind: 0 },
     { name: 'System Design', pct: sd.pct, state: `day ${sd.currentDay} of ${sd.total}`, pace: sd.behind ? `${sd.behind}d behind` : 'on track', behind: sd.behind || 0 },
     { name: 'Full Stack', pct: odin.pct, state: `${odin.done} of ${odin.total} items`, pace: '4-month plan', behind: 0 },
@@ -54,7 +45,7 @@ export function buildTracks() {
 }
 
 export function buildAiContext() {
-  const tracks = buildTracks().filter((t) => !AI_EXCLUDED.has(t.name))
+  const tracks = buildTracks()
   const week = activityLast7()
   const lists = getChecklists()
   const sum = checklistSummary(lists)
@@ -65,8 +56,6 @@ export function buildAiContext() {
     const st = getStore(`read:${planId}`, { done: {} })
     return Object.values(st.done || {}).some((ts) => String(ts).slice(0, 10) === todayISO())
   }
-  // 'math' and 'handson' are the ML · Quant reading plans, so they are left out here
-  // for the same reason the track is: they are not part of the plan being reviewed.
   const targets = [
     doneToday('system-design') || sd.finished,
     !!dsaToday,

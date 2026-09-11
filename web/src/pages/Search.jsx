@@ -7,14 +7,11 @@ import { ODIN_ITEMS } from '../lib/odin.js'
 
 const ROUTES = {
   'system-design': { to: '/system-design', label: 'System Design' },
-  math: { to: '/ml-quant', label: 'ML · Quant · Math' },
-  handson: { to: '/ml-quant', label: 'ML · Quant · Hands-On' },
 }
 const SCOPES = [
   { k: 'all', label: 'All' },
   { k: 'reading', label: 'Reading' },
   { k: 'cs', label: 'CS Core' },
-  { k: 'quant', label: 'Quant' },
   { k: 'dsa', label: 'DSA' },
   { k: 'contest', label: 'Contests' },
   { k: 'odin', label: 'Full Stack' },
@@ -25,6 +22,7 @@ function buildDocs() {
   const docs = []
   Object.values(PLANS).forEach((plan) => {
     const r = ROUTES[plan.id]
+    if (!r) return
     const st = getStore(`read:${plan.id}`, { notes: {} })
     plan.days.forEach((d) => docs.push({
       scope: 'reading', section: r.label, to: r.to,
@@ -32,10 +30,6 @@ function buildDocs() {
       text: `${plan.title} day ${d.n} ${d.chapters.join(' ')} ${d.group} ${st.notes?.[d.n] || ''}`,
     }))
   })
-  getStore('col:quant', []).forEach((q) => docs.push({
-    scope: 'quant', section: 'Quant', to: '/ml-quant', title: q.prompt || 'Question',
-    sub: [q.topic, q.difficulty].filter(Boolean).join(' · '), text: `${q.prompt} ${q.topic} ${q.difficulty} ${q.notes || ''}`,
-  }))
   getStore('col:dsa', []).forEach((p) => {
     const topics = Array.isArray(p.topics) ? p.topics.join(' ') : (p.topic || '')
     docs.push({
@@ -114,7 +108,7 @@ export default function Search() {
         {!q.trim() ? (
           <div className="sempty">
             <div className="sempty-t">Search across everything</div>
-            <div className="sempty-b">Reading days, CS Core topics, quant questions, DSA problems, contests, and your notes.</div>
+            <div className="sempty-b">Reading days, CS Core topics, DSA problems, contests, and your notes.</div>
             <div className="sexamples">
               <span className="lbl">Try</span>
               {EXAMPLES.map((e) => <button key={e} className="sex" onClick={() => setQ(e)}>{e}</button>)}

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { IconBack, TechLogo, TECH_LABEL } from '../components/icons.jsx'
-import { SmallRing } from '../components/ui.jsx'
+import { SmallRing, Segmented } from '../components/ui.jsx'
 import { useStore } from '../lib/store.js'
 import { activityRange } from '../lib/progress.js'
-import { scheduleInfo, fmtDate, fmtDateFull } from '../lib/schedule.js'
+import { scheduleInfo } from '../lib/schedule.js'
 import {
   ODIN_ITEMS, ODIN_COURSE_ORDER, ODIN_TOTAL_HOURS, ODIN_PACE,
   packOdinDays, dayHours, fmtHours, courseStats, currentDayIndex, writeOdinStats, odinPct, techForDay,
@@ -111,6 +111,7 @@ export default function Odin() {
     const t = setTimeout(() => setReady(true), 620); return () => clearTimeout(t)
   }, [])
   const [done, setDone] = useStore('odin:done', {})
+  const [pacing, setPacing] = useStore('odin:pacing', 1)
   const [selDay, setSelDay] = useState(null)
   const [page, setPage] = useState(0)
   const swipeX = useRef(0)
@@ -121,17 +122,26 @@ export default function Odin() {
   const toggle = (r) => setDone((s) => { const n = { ...s }; if (n[r.key]) delete n[r.key]; else n[r.key] = new Date().toISOString(); return n })
   const markDay = (rows, complete) => setDone((s) => { const n = { ...s }; rows.forEach((r) => { if (complete) n[r.key] = new Date().toISOString(); else delete n[r.key] }); return n })
 
+  // Pacing: map each unit index (1-based) to a plan-day number.
+  // pacing=1: Day 1,2,3,...  pacing=2: Day 1,1,2,2,...  pacing=3: Day 1,1,1,2,2,2,...
+  const p = Math.max(1, Math.min(3, pacing || 1))
+  const planDay = (unitN) => Math.ceil(unitN / p)
+  const planDayCount = planDay(total)
+  const dayLabel = (unitN) => unitN ? `Day ${planDay(unitN)}` : ''
+
   const curIdx = useMemo(() => currentDayIndex(days, done), [days, done])
   // Date-based schedule with 2 days of work each Sat/Sun (weekend-double).
-  const sched = useMemo(() => scheduleInfo('full-stack', total), [total])
-  const focusDay = Math.min(sched.todayN || curIdx, total)
-  const isToday = (n) => sched.todaySet.has(n)
-  const dayLabel = (n) => {
-    const dt = sched.dates[n - 1]
-    if (n > 1 && sched.dates[n - 2] === dt) return `${fmtDate(dt)} ②`
-    if (n < total && sched.dates[n] === dt) return `${fmtDate(dt)} ①`
-    return fmtDate(dt)
-  }
+  const sched = useMemo(() => scheduleInfo('full-stack', planDayCount), [planDayCount])
+  // Map schedule's todayN (plan-day) back to a unit index for focusing.
+  const focusDay = (() => {
+    if (sched.todayN) {
+      // First unit of this plan-day
+      const first = (sched.todayN - 1) * p + 1
+      return Math.min(first, total)
+    }
+    return Math.min(curIdx, total)
+  })()
+  const isToday = (n) => sched.todaySet.has(planDay(n))
   const active = selDay && selDay <= total ? selDay : focusDay
   useEffect(() => { setPage(Math.floor((active - 1) / PAGE)) }, [active])
   const goDay = (delta) => setSelDay((prev) => { const cur = prev && prev <= total ? prev : focusDay; return Math.min(total, Math.max(1, cur + delta)) })
@@ -148,14 +158,13 @@ export default function Odin() {
   const { done: doneCount, pct } = odinPct(done)
   const cstats = courseStats(done)
   const doneDays = days.filter((rows) => rows.every((r) => done[r.key])).length
-  const remaining = total - doneDays
+  const donePlanDays = planDay(doneDays)
+  const remaining = planDayCount - donePlanDays
   const allComplete = doneCount >= ODIN_ITEMS.length
-  const behind = Math.max(0, sched.due - doneDays)
-  const ahead = Math.max(0, doneDays - sched.due)
+  const behind = Math.max(0, sched.due - donePlanDays)
+  const ahead = Math.max(0, donePlanDays - sched.due)
   const paceText = allComplete ? 'Complete' : behind ? `${behind}d behind` : ahead ? `${ahead}d ahead` : 'On track'
   const paceCls = allComplete ? 'ok' : behind ? 'late' : ahead ? 'ok' : 'ontrack'
-  const estFinish = sched.finishISO ? new Date(sched.finishISO + 'T00:00') : new Date(Date.now() + remaining * 86400000)
-
   useEffect(() => { writeOdinStats(done) }, [done])
 
   const activeRows = days[active - 1]
@@ -179,7 +188,7 @@ export default function Odin() {
           <div className="rk-stat-body">
             <SmallRing pct={pct} size={92} stroke={9} />
             <div className="rk-stat-info">
-              <div className="cs-head-day">{fmtDate(sched.dates[focusDay - 1])} <span>/ {total} days</span></div>
+              <div className="cs-head-day">{dayLabel(focusDay)} <span>/ {planDayCount} days</span></div>
               <div className="cs-head-sub">{doneCount} of {ODIN_ITEMS.length} items · {ODIN_TOTAL_HOURS}h</div>
               <span className={`rpace ${paceCls}`}>{paceText}</span>
             </div>
@@ -193,7 +202,13 @@ export default function Odin() {
               </div>
             ))}
           </div>
-          <div className="rk-finish">{doneCount >= ODIN_ITEMS.length ? 'Path complete — you did it.' : <>Est. finish <b>{estFinish.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</b> · {remaining} day{remaining === 1 ? '' : 's'} left</>}</div>
+          <div className="rk-finish">{doneCount >= ODIN_ITEMS.length ? 'Path complete — you did it.' : <>{remaining} day{remaining === 1 ? '' : 's'} left</>}</div>
+        </div>
+        <div className="cs-box cs-box-pace">
+          <div className="cs-pace">
+            <div className="cs-pace-l"><span className="cs-pace-t">Daily pace</span><span className="cs-pace-s">{p === 1 ? '1 unit/day' : `${p} units/day`} · finishes in {planDayCount} days</span></div>
+            <Segmented value={p} onChange={setPacing} options={[1, 2, 3].map((v) => ({ value: v, label: `${v}` }))} />
+          </div>
         </div>
         <Consistency />
       </aside>
@@ -207,7 +222,7 @@ export default function Odin() {
             <button className="cs-nav-arrow" onClick={() => goDay(-1)} disabled={active <= 1} aria-label="Previous day">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
             </button>
-            <span className="cs-detail-eye">{isToday(active) ? 'Today · ' : ''}{fmtDateFull(sched.dates[active - 1])}{sched.dates[active - 1] && (sched.dates[active - 2] === sched.dates[active - 1] || sched.dates[active] === sched.dates[active - 1]) ? ' · session ' + (sched.dates[active - 2] === sched.dates[active - 1] ? '2' : '1') : ''}</span>
+            <span className="cs-detail-eye">{isToday(active) ? 'Today · ' : ''}{dayLabel(active)}</span>
             <button className="cs-nav-arrow" onClick={() => goDay(1)} disabled={active >= total} aria-label="Next day">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
             </button>
@@ -263,7 +278,7 @@ export default function Odin() {
 
       <aside className="cs-col cs-col-right reveal">
         <div className="cs-window">
-          <div className="cs-window-h">Full path · {total} days</div>
+          <div className="cs-window-h">Full path · {planDayCount} days</div>
           <div className="cs-window-scroll">
             <div className="cs-cellgrid">
               {slice.map((rows, i) => {

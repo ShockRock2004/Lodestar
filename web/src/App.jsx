@@ -7,7 +7,6 @@ import CryptgenBento from './pages/CryptgenBento.jsx'
 import Dsa from './pages/Dsa.jsx'
 import CsCore from './pages/CsCore.jsx'
 import SystemDesign from './pages/SystemDesign.jsx'
-import MlQuant from './pages/MlQuant.jsx'
 import Search from './pages/Search.jsx'
 import Odin from './pages/Odin.jsx'
 import Lld from './pages/Lld.jsx'
@@ -80,7 +79,6 @@ export default function App() {
           <Route path="dsa/plan/:name" element={<DsaPlan />} />
           <Route path="cs-core" element={<CsCore />} />
           <Route path="system-design" element={<SystemDesign />} />
-          <Route path="ml-quant" element={<MlQuant />} />
           <Route path="search" element={<Search />} />
           <Route path="full-stack" element={<Odin />} />
           <Route path="lld" element={<Lld />} />
