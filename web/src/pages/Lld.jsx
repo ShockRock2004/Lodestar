@@ -6,7 +6,7 @@ import { useStore } from '../lib/store.js'
 import { scheduleInfo } from '../lib/schedule.js'
 import {
   LLD_DAYS, LLD_TOTAL_DAYS, TYPE_LABEL,
-  dayComplete, currentDayIndex, lldPct, phaseStats, doneDaysCount, writeLldStats,
+  dayComplete, currentDayIndex, lldPct, phaseStats, doneDaysCount,
 } from '../lib/lld.js'
 
 const PAGE = 12
@@ -40,7 +40,10 @@ export default function Lld() {
 
   const curIdx = useMemo(() => currentDayIndex(done), [done])
   const cal = useMemo(() => scheduleInfo('lld', total), [total])
-  const focusDay = Math.min(cal.todayN || curIdx, total)
+  // Focus the first unfinished day, not the calendar day: working ahead used to pin a
+  // day already ticked off, and falling behind used to skip past the unfinished work.
+  // The "Today" badge stays date-based — that is what the calendar is for.
+  const focusDay = Math.min(curIdx, total)
   const isToday = (n) => cal.todaySet.has(n)
   const dayLabel = (n) => n ? `Day ${n}` : ''
   const active = selDay && selDay <= total ? selDay : focusDay
@@ -65,8 +68,6 @@ export default function Lld() {
   const paceText = allComplete ? 'Complete' : behind ? `${behind}d behind` : ahead ? `${ahead}d ahead` : 'On track'
   const paceCls = allComplete ? 'ok' : behind ? 'late' : ahead ? 'ok' : 'ontrack'
   const remaining = total - doneDays
-
-  useEffect(() => { writeLldStats(done) }, [done])
 
   const activeDay = days[active - 1]
   const dayDone = dayComplete(activeDay, done)

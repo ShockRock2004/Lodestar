@@ -4,8 +4,6 @@
 //   packed to ~3 lessons/day so the course fits in 24 days instead of 31.
 // QUESTIONS (Oct 25–Nov 4): all 33 problems from github.com/ashishps1/awesome-low-level-design,
 //   3/day flat (33 / 3 = 11 days) — clustered by theme, warm-ups first, hardest last.
-import { setStore } from './store.js'
-
 const A = (s) => `https://algomaster.io/learn/lld/${s}`
 const P = (f) => `https://github.com/ashishps1/awesome-low-level-design/blob/main/problems/${f}.md`
 
@@ -164,9 +162,4 @@ export function phaseStats(doneMap) {
 export function doneDaysCount(doneMap) {
   return LLD_DAYS.filter((d) => dayComplete(d, doneMap)).length
 }
-export function writeLldStats(doneMap) {
-  const { doneItems, totalItems, pct } = lldPct(doneMap)
-  setStore('lld:stats', { done: doneItems, total: totalItems, pct, doneDays: doneDaysCount(doneMap) })
-}
-
 export const TYPE_LABEL = { concept: 'Concept', pattern: 'Pattern', problem: 'Problem', practice: 'Practice', mock: 'Mock' }

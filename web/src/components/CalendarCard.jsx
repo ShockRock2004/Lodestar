@@ -3,8 +3,9 @@ import { Card } from './ui/card.jsx'
 import { todayISO } from '../lib/store.js'
 
 // Reusable month calendar (extracted from the home dashboard).
-//  - markedDates: Set<iso>       → simple light-grey box (quant "has questions")
-//  - heatLevels:  { iso: 1..5 }  → 5-level activity heatmap (home)
+//  - markedDates: Set<iso>       → simple light-grey box
+//  - heatLevels:  { iso: n }     → activity heatmap; n = distinct tracks active that
+//    day, clamped to the 5 rendered levels (see activitySectionLevels)
 // Clicking any day calls onPick(iso). `fill` makes the card grow to its container.
 const CAL_DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 

@@ -4,8 +4,6 @@
 // Phase 2 (Days 11–27): LeetCode's "Top SQL 50" study plan, exactly 3
 //   problems/day (the last day carries the 2 leftover), in the plan's own order.
 // Phase 3 (Days 28–32): LeetCode's Database Quest, 1 of its 5 levels/day.
-import { setStore } from './store.js'
-
 const CODDY_URL = 'https://coddy.tech/journeys/sqlite/sections'
 const QUEST_URL = 'https://leetcode.com/quest/database-quest/'
 const LC = (slug) => `https://leetcode.com/problems/${slug}/`
@@ -120,10 +118,5 @@ export function phaseStats(doneMap) {
 export function doneDaysCount(doneMap) {
   return SQL_DAYS.filter((d) => dayComplete(d, doneMap)).length
 }
-export function writeSqlStats(doneMap) {
-  const { doneItems, totalItems, pct } = sqlPct(doneMap)
-  setStore('sql:stats', { done: doneItems, total: totalItems, pct, doneDays: doneDaysCount(doneMap) })
-}
-
 export const TYPE_LABEL = { course: 'Course', quest: 'Level', easy: 'Easy', med: 'Medium', hard: 'Hard' }
 export const DIFFICULTY_TYPES = new Set(['easy', 'med', 'hard'])

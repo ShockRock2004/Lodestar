@@ -2,7 +2,7 @@ import { supabase } from './supabase.js'
 import { getStore } from './store.js'
 
 // Global localStorage <-> Supabase mirror. Every persistent studyos key (reading
-// progress, CS Core, Full Stack, the quant bank, goals & settings) is stored as a
+// progress, CS Core, Full Stack, LLD, SQL, checklists, goals & settings) is stored as a
 // jsonb blob in the `app_state` KV table. col:dsa / col:contests are excluded because
 // they already sync through their own dedicated tables via useCloud().
 //

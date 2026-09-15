@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom'
 import { IconBack } from '../components/icons.jsx'
 import { SmallRing } from '../components/ui.jsx'
 import { useStore } from '../lib/store.js'
+import { scheduleInfo } from '../lib/schedule.js'
 import {
   SQL_DAYS, SQL_TOTAL_DAYS, TYPE_LABEL, DIFFICULTY_TYPES,
-  dayComplete, currentDayIndex, sqlPct, phaseStats, doneDaysCount, writeSqlStats,
+  dayComplete, currentDayIndex, sqlPct, phaseStats, doneDaysCount,
 } from '../lib/sql.js'
 
 const PAGE = 12
@@ -43,6 +44,8 @@ export default function Sql() {
   const markDay = (day, complete) => setDone((s) => { const n = { ...s }; day.items.forEach((it) => { if (complete) n[it.key] = new Date().toISOString(); else delete n[it.key] }); return n })
 
   const curIdx = useMemo(() => currentDayIndex(done), [done])
+  const cal = useMemo(() => scheduleInfo('sql', total), [total])
+  const isToday = (n) => cal.todaySet.has(n)
   const focusDay = Math.min(curIdx, total)
   const active = selDay && selDay <= total ? selDay : focusDay
   useEffect(() => { setPage(Math.floor((active - 1) / PAGE)) }, [active])
@@ -62,8 +65,10 @@ export default function Sql() {
   const doneDays = doneDaysCount(done)
   const allComplete = doneDays >= total
   const remaining = total - doneDays
-
-  useEffect(() => { writeSqlStats(done) }, [done])
+  const behind = Math.max(0, cal.due - doneDays)
+  const ahead = Math.max(0, doneDays - cal.due)
+  const paceText = allComplete ? 'Complete' : behind ? `${behind}d behind` : ahead ? `${ahead}d ahead` : 'On track'
+  const paceCls = allComplete ? 'ok' : behind ? 'late' : ahead ? 'ok' : 'ontrack'
 
   const activeDay = days[active - 1]
   const dayDone = dayComplete(activeDay, done)
@@ -82,13 +87,13 @@ export default function Sql() {
         <div className="cs-grid3 rk-grid">
           <aside className="cs-col cs-col-left reveal">
             <div className="cs-box rk-stats">
-              <div className="cs-panel-eye">SQL prep · self-paced</div>
+              <div className="cs-panel-eye">SQL prep · Oct 11 – Nov 11</div>
               <div className="rk-stat-body">
                 <SmallRing pct={pct} size={92} stroke={9} />
                 <div className="rk-stat-info">
                   <div className="cs-head-day">Day {focusDay} <span>/ {total}</span></div>
                   <div className="cs-head-sub">{doneDays} of {total} days · {doneItems} items done</div>
-                  <span className="rpace ontrack">Self-paced</span>
+                  <span className={`rpace ${paceCls}`}>{paceText}</span>
                 </div>
               </div>
               <div className="rk-vols">
@@ -100,7 +105,7 @@ export default function Sql() {
                   </div>
                 ))}
               </div>
-              <div className="rk-finish">{allComplete ? 'Plan complete — nice work.' : <>{remaining} day{remaining === 1 ? '' : 's'} left at this pace.</>}</div>
+              <div className="rk-finish">{allComplete ? 'Plan complete — nice work.' : <>{remaining} day{remaining === 1 ? '' : 's'} left</>}</div>
             </div>
 
             <div className="cs-box">
@@ -122,7 +127,7 @@ export default function Sql() {
                 <button className="cs-nav-arrow" onClick={() => goDay(-1)} disabled={active <= 1} aria-label="Previous day">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
                 </button>
-                <span className="cs-detail-eye">{active === focusDay ? 'Up next · ' : ''}Day {active} of {total}</span>
+                <span className="cs-detail-eye">{isToday(active) ? 'Today · ' : active === focusDay ? 'Up next · ' : ''}Day {active} of {total}</span>
                 <button className="cs-nav-arrow" onClick={() => goDay(1)} disabled={active >= total} aria-label="Next day">
                   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg>
                 </button>
@@ -130,7 +135,7 @@ export default function Sql() {
               <div className="rk-detail">
                 <div className="rk-detail-top">
                   <span className="uchip">{activeDay.phase}</span>
-                  {active === focusDay ? <span className="rk-today-badge">Up next</span> : null}
+                  {isToday(active) ? <span className="rk-today-badge">Today</span> : active === focusDay ? <span className="rk-today-badge">Up next</span> : null}
                   {dayDone ? <span className="rk-done-badge">Done</span> : null}
                 </div>
                 <div className="rk-pages">{activeDay.title}</div>
@@ -163,7 +168,7 @@ export default function Sql() {
                   {slice.map((d, i) => {
                     const n = pg * PAGE + i + 1
                     const isDone = dayComplete(d, done)
-                    const cls = 'cs-cell' + (isDone ? ' complete' : '') + (n === focusDay ? ' cs-today' : '') + (n === active ? ' sel' : '')
+                    const cls = 'cs-cell' + (isDone ? ' complete' : '') + (isToday(n) || n === focusDay ? ' cs-today' : '') + (n === active ? ' sel' : '')
                     return (
                       <button key={n} className={cls} style={{ animationDelay: `${Math.min(i * 8, 200)}ms` }} onClick={() => setSelDay(n)} aria-label={`Day ${n}${n === focusDay ? ', up next' : ''}`}>
                         {isDone ? <span className="cs-cell-check"><svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 12l4 4 8-8" fill="none" stroke="#0b0b0b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg></span> : <SmallRing pct={n === active ? 100 : 0} size={26} stroke={3} showValue={false} />}

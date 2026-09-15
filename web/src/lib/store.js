@@ -40,6 +40,22 @@ export function useStore(key, fallback) {
   return [val, set]
 }
 
+// Re-renders on ANY store write (local or from another tab). For views whose numbers
+// are derived from several keys at once — the home dashboard reads six tracks — this
+// is what keeps them live instead of frozen at their first-mount snapshot.
+export function useStoreTick() {
+  const [, bump] = useState(0)
+  useEffect(() => {
+    const onEvt = () => bump((n) => n + 1)
+    window.addEventListener('studyos-store', onEvt)
+    window.addEventListener('storage', onEvt)
+    return () => {
+      window.removeEventListener('studyos-store', onEvt)
+      window.removeEventListener('storage', onEvt)
+    }
+  }, [])
+}
+
 export const uid = () => {
   try { return crypto.randomUUID() } catch (e) { return String(Date.now()) + Math.random().toString(16).slice(2) }
 }

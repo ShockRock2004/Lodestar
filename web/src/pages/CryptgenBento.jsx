@@ -1,13 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../components/ui/card.jsx'
 import Reveal from '../components/Reveal.jsx'
 import Modal from '../components/Modal.jsx'
 import CalendarCard from '../components/CalendarCard.jsx'
-import { useReading, useCollection, activityRange, entriesForDate, readingStats, activitySectionLevels } from '../lib/progress.js'
-import { getStore, useStore, todayISO } from '../lib/store.js'
+import { useReading, useCollection, entriesForDate, activitySectionLevels, currentStreak, dsaSolvedISO } from '../lib/progress.js'
+import { allTracks, overallPct } from '../lib/tracks.js'
+import { getStore, useStore, useStoreTick, todayISO } from '../lib/store.js'
 import { IconChevron, IconDsa, IconSys, IconCs, IconOdin, IconLld, IconSql, IconChecklist } from '../components/icons.jsx'
-import { scheduleInfo } from '../lib/schedule.js'
 import { LLD_TOTAL_DAYS } from '../lib/lld.js'
 import { SQL_TOTAL_DAYS } from '../lib/sql.js'
 import SwipeDeck from '../components/SwipeDeck.jsx'
@@ -74,79 +74,72 @@ const toggleToday = (r) => {
   if (r.finished) return                                // already 100% and nothing done today — never toggle a past day off
   r.toggle(r.currentDay)                                // mark today's day done
 }
-const dayOf = (r) => r.plan.days[r.currentDay - 1]
-function globalStreak() {
-  const range = activityRange(120)
-  let s = 0, i = range.length - 1
-  if (range[i] && range[i].count === 0) i--
-  for (; i >= 0 && range[i] && range[i].count > 0; i--) s++
-  return s
-}
+const dayOf = (r) => r.plan.days[Math.min(r.currentDay, r.total) - 1]
 
 /* ---------- single source of truth for the day ---------- */
 function useToday() {
+  // Derived numbers come from the raw stores via allTracks(); the tick keeps them
+  // live when any of those stores is written (including a cloud pull in another tab).
+  useStoreTick()
   const sd = useReading('system-design')
   const dsa = useCollection('dsa')
-  const cs = getStore('cs:stats', { done: 0, total: 46, pct: 0 })
-  const odin = getStore('odin:stats', { done: 0, total: 197, pct: 0 })
-  const lld = getStore('lld:stats', { done: 0, total: 0, pct: 0, doneDays: 0 })
-  const lldBehind = Math.max(0, scheduleInfo('lld', LLD_TOTAL_DAYS).due - (lld.doneDays || 0))
-  const sql = getStore('sql:stats', { done: 0, total: 0, pct: 0, doneDays: 0 })
+  const t = allTracks()
 
-  const dsaToday = dsa.items.find((x) => x.date === todayISO())
+  const dsaToday = dsa.items.find((x) => dsaSolvedISO(x) === todayISO())
   const readDone = (r) => doneToday(r).length > 0 || r.finished
+  const behindPace = (s) => (s.behind ? `${s.behind}d behind` : s.ahead ? `${s.ahead}d ahead` : 'On track')
 
   const tracks = [
     {
-      key: 'sd', name: 'System Design', Icon: IconSys, pct: sd.pct, to: '/system-design',
-      state: `Day ${sd.currentDay} of ${sd.total}`, late: sd.behind > 0, pace: sd.behind ? `${sd.behind}d behind` : 'On track',
-      items: [{ label: 'Today’s reading', meta: sd.finished ? 'complete' : `pp. ${dayOf(sd).from}–${dayOf(sd).to}`, done: readDone(sd), toggle: () => toggleToday(sd) }],
+      key: 'dsa', name: 'DSA', Icon: IconDsa, pct: null, to: '/dsa',
+      state: `${t.dsa.done} of ${t.dsa.total} solved`, late: false, pace: 'Daily',
+      objective: dsaToday ? `${dsaToday.title}${dsaToday.score ? ` · ${dsaToday.score}/5` : ''}` : 'Log today’s LeetCode problem',
+      dsaToday, dsa,
+      items: [{ label: 'Today’s problem', meta: dsaToday ? (dsaToday.score ? `${dsaToday.score}/5` : 'solved') : 'not logged', done: !!dsaToday, toggle: null }],
     },
     {
-      key: 'cs', name: 'CS Core', Icon: IconCs, pct: cs.pct, to: '/cs-core',
-      state: `${cs.done} of ${cs.total || 46} topics`, late: false, pace: 'Self-paced',
+      key: 'cs', name: 'CS Core', Icon: IconCs, pct: t.cs.loaded ? t.cs.pct : 0, to: '/cs-core',
+      state: t.cs.loaded ? `${t.cs.done} of ${t.cs.total} topics` : 'Open to load curriculum',
+      late: t.cs.behind > 0, pace: t.cs.loaded ? t.cs.paceLabel : 'Not loaded',
       objective: 'OS · Computer Networks · DBMS', items: [],
     },
     {
-      key: 'dsa', name: 'DSA', Icon: IconDsa, pct: null, to: '/dsa',
-      state: 'Daily practice', late: false, pace: 'Daily',
-      objective: dsaToday ? `${dsaToday.title} · ${dsaToday.score}/5` : 'Log today’s LeetCode problem',
-      dsaToday, dsa,
-      items: [{ label: 'Today’s problem', meta: dsaToday ? `${dsaToday.score}/5` : 'not logged', done: !!dsaToday, toggle: null }],
+      key: 'sd', name: 'System Design', Icon: IconSys, pct: sd.pct, to: '/system-design',
+      state: `Day ${Math.min(sd.currentDay, sd.total)} of ${sd.total}`, late: sd.behind > 0, pace: behindPace(sd),
+      items: [{ label: 'Today’s reading', meta: sd.finished ? 'complete' : `pp. ${dayOf(sd).from}–${dayOf(sd).to}`, done: readDone(sd), toggle: () => toggleToday(sd) }],
     },
     {
-      key: 'odin', name: 'Full Stack', Icon: IconOdin, pct: odin.pct, to: '/full-stack',
-      state: `${odin.done} of ${odin.total} items`, late: false, pace: '4-month plan',
+      key: 'odin', name: 'Full Stack', Icon: IconOdin, pct: t.odin.pct, to: '/full-stack',
+      state: `${t.odin.done} of ${t.odin.total} items`, late: t.odin.behind > 0, pace: t.odin.paceLabel,
       objective: 'Foundations → JS → React → NodeJS', items: [],
     },
     {
-      key: 'lld', name: 'Low Level Design', Icon: IconLld, pct: lld.pct, to: '/lld',
-      state: `${lld.doneDays || 0} of ${LLD_TOTAL_DAYS} days`, late: lldBehind > 0,
-      pace: lldBehind ? `${lldBehind}d behind` : 'On track',
+      key: 'lld', name: 'Low Level Design', Icon: IconLld, pct: t.lld.pct, to: '/lld',
+      state: `${t.lld.doneDays} of ${LLD_TOTAL_DAYS} days`, late: t.lld.behind > 0, pace: t.lld.paceLabel,
       objective: 'OOP · patterns · 33 problems', items: [],
     },
     {
-      key: 'sql', name: 'SQL', Icon: IconSql, pct: sql.pct, to: '/sql',
-      state: `${sql.doneDays || 0} of ${SQL_TOTAL_DAYS} days`, late: false, pace: 'Self-paced',
+      key: 'sql', name: 'SQL', Icon: IconSql, pct: t.sql.pct, to: '/sql',
+      state: `${t.sql.doneDays} of ${SQL_TOTAL_DAYS} days`, late: t.sql.behind > 0, pace: t.sql.paceLabel,
       objective: 'SQLite journey → SQL 50 → Database Quest', items: [],
     },
   ]
 
-  const allItems = tracks.flatMap((t) => t.items)
+  const allItems = tracks.flatMap((t2) => t2.items)
   const done = allItems.filter((i) => i.done).length
   const total = allItems.length
 
+  // Whichever unfinished track is furthest behind gets the "continue" slot.
   const cand = [
     { name: 'System Design', to: '/system-design', behind: sd.behind, done: readDone(sd), obj: sd.finished ? 'Plan complete' : `Day ${Math.min(sd.currentDay, sd.total)} · pp. ${dayOf(sd).from}–${dayOf(sd).to}` },
     { name: 'DSA', to: '/dsa', behind: 0, done: !!dsaToday, obj: 'Log today’s LeetCode problem' },
+    { name: 'CS Core', to: '/cs-core', behind: t.cs.behind, done: !t.cs.loaded || t.cs.behind === 0, obj: `${t.cs.doneDays} of ${t.cs.days} days done` },
+    { name: 'Full Stack', to: '/full-stack', behind: t.odin.behind, done: t.odin.behind === 0, obj: `${t.odin.doneDays} of ${t.odin.days} days done` },
+    { name: 'Low Level Design', to: '/lld', behind: t.lld.behind, done: t.lld.behind === 0, obj: `${t.lld.doneDays} of ${t.lld.days} days done` },
   ]
   const resume = cand.filter((x) => !x.done).sort((a, b) => b.behind - a.behind)[0] || null
 
-  const ORDER = ['dsa', 'cs', 'sd', 'odin', 'lld', 'sql']
-  tracks.sort((a, b) => ORDER.indexOf(a.key) - ORDER.indexOf(b.key))
-  const pcts = tracks.map((t) => t.pct).filter((p) => p != null)
-  const overall = pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : 0
-  return { tracks, completion: { done, total }, resume, streak: globalStreak(), overall }
+  return { tracks, completion: { done, total }, resume, streak: currentStreak(), overall: overallPct(t) }
 }
 
 /* ---------- header ---------- */
@@ -169,7 +162,7 @@ function TopBar({ resume, streak, completion, overall }) {
           <span className="text-[11px] uppercase tracking-[0.12em] text-[#6a6a6a]">overall</span>
         </div>
         <div className="flex flex-col items-center gap-1">
-          <Ring pct={(completion.done / completion.total) * 100} size={52} stroke={4}>
+          <Ring pct={completion.total ? (completion.done / completion.total) * 100 : 0} size={52} stroke={4}>
             <span className="text-[12px] font-bold text-white">{completion.done}/{completion.total}</span>
           </Ring>
           <span className="text-[10px] uppercase tracking-[0.12em] text-[#6a6a6a]">today</span>
@@ -309,14 +302,20 @@ function Toggle({ storeKey, def }) {
 }
 
 function Calendar() {
+  useStoreTick()
   const [openDay, setOpenDay] = useState(null)
-  const heat = useMemo(() => activitySectionLevels(), [])
+  const heat = activitySectionLevels()
+  const t = allTracks()
+  // Every percentage-bearing track, so the popover's bars and its overall figure
+  // match the six tiles above rather than a stale three-track subset.
   const sections = openDay ? [
-    { name: 'System Design', pct: readingStats('system-design').pct },
-    { name: 'CS Core', pct: getStore('cs:stats', { pct: 0 }).pct },
-    { name: 'Full Stack', pct: getStore('odin:stats', { pct: 0 }).pct },
+    { name: 'CS Core', pct: t.cs.pct },
+    { name: 'System Design', pct: t.sd.pct },
+    { name: 'Full Stack', pct: t.odin.pct },
+    { name: 'Low Level Design', pct: t.lld.pct },
+    { name: 'SQL', pct: t.sql.pct },
   ] : []
-  const overall = sections.length ? Math.round(sections.reduce((a, s) => a + s.pct, 0) / sections.length) : 0
+  const overall = openDay ? overallPct(t) : 0
   const entries = openDay ? entriesForDate(openDay) : []
   return (
     <>
@@ -354,8 +353,10 @@ const TL_MONTHS = [
   { m: 'November', s: 'NOV', w: 15 },
   { m: 'December', s: 'DEC', w: 15 },
 ]
-const REVISION_START = 77.5 // % across the ruler ≈ Nov 15
-const REVISION_END = 85 // ≈ Nov 30 (the Nov / Dec boundary)
+// Phase 3 on the targets board is Nov 11-25, right after phase 2 ends on Nov 10.
+// November occupies 70%-85% of the ruler across 30 days, i.e. 0.5% per day.
+const REVISION_START = 75 // % across the ruler = Nov 11
+const REVISION_END = 82 // = Nov 25
 const TL_P1 = [
   { name: 'DSA', Icon: IconDsa, to: '/dsa' },
   { name: 'HLD', Icon: IconSys, to: '/system-design' },
@@ -415,7 +416,7 @@ function Timeline() {
         {/* revision band spanning Nov 15 → 30, with a flag above */}
         <div className="pointer-events-none absolute inset-y-0 z-20" style={{ left: `${REVISION_START}%`, width: `${REVISION_END - REVISION_START}%` }}>
           <div className="absolute inset-y-0 rounded-md border-x border-dashed border-white/35 bg-white/[0.07]" style={{ left: '-1px', right: '-1px' }} />
-          <div className="absolute -top-[22px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/15 bg-[#111] px-2 py-[3px] text-[9.5px] font-semibold uppercase tracking-[0.12em] text-white/70">Revision · Nov 15–30</div>
+          <div className="absolute -top-[22px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-white/15 bg-[#111] px-2 py-[3px] text-[9.5px] font-semibold uppercase tracking-[0.12em] text-white/70">Revision · Nov 11–25</div>
         </div>
         <div className="flex overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
           {TL_MONTHS.map((mo) => (
@@ -428,13 +429,13 @@ function Timeline() {
 
       {/* ── phase flow: Phase 1 → Phase 2 → Revision, aligned under their months ── */}
       <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-[46fr_auto_30fr_auto_24fr] sm:items-stretch sm:gap-2">
-        <TLPhase n="01" range="Aug – Sep" items={TL_P1} />
+        <TLPhase n="01" range="Sep 11 – Oct 10" items={TL_P1} />
         <TLArrow />
-        <TLPhase n="02" range="October" items={TL_P2} />
+        <TLPhase n="02" range="Oct 11 – Nov 10" items={TL_P2} />
         <TLArrow />
         <div className="flex min-w-0 flex-col justify-center rounded-2xl border border-dashed border-white/20 p-3.5" style={{ background: 'rgba(255,255,255,.02)' }}>
           <span className="text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[#8a8a8a]">Revision</span>
-          <span className="mt-1 text-[14px] font-semibold text-white">Nov 15 – 30</span>
+          <span className="mt-1 text-[14px] font-semibold text-white">Nov 11 – 25</span>
           <span className="mt-0.5 text-[11px] text-[#7c7c7c]">Consolidate &amp; mock</span>
         </div>
       </div>

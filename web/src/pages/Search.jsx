@@ -4,6 +4,8 @@ import { IconBack, IconSearch } from '../components/icons.jsx'
 import { PLANS } from '../lib/plans.js'
 import { getStore } from '../lib/store.js'
 import { ODIN_ITEMS } from '../lib/odin.js'
+import { LLD_DAYS } from '../lib/lld.js'
+import { SQL_DAYS } from '../lib/sql.js'
 
 const ROUTES = {
   'system-design': { to: '/system-design', label: 'System Design' },
@@ -15,8 +17,10 @@ const SCOPES = [
   { k: 'dsa', label: 'DSA' },
   { k: 'contest', label: 'Contests' },
   { k: 'odin', label: 'Full Stack' },
+  { k: 'lld', label: 'LLD' },
+  { k: 'sql', label: 'SQL' },
 ]
-const EXAMPLES = ['consistent hashing', 'PCA', 'probability', 'two pointer', 'Codeforces']
+const EXAMPLES = ['consistent hashing', 'observer pattern', 'window function', 'two pointer', 'Codeforces']
 
 function buildDocs() {
   const docs = []
@@ -38,10 +42,15 @@ function buildDocs() {
       text: `${p.title} ${p.difficulty} ${topics} ${p.notes || ''} ${p.status || ''}`,
     })
   })
-  getStore('col:contests', []).forEach((c) => docs.push({
-    scope: 'contest', section: 'Contest', to: '/dsa', title: c.name || 'Contest',
-    sub: [c.platform, c.date].filter(Boolean).join(' · '), text: `${c.name} ${c.platform} contest ${c.date || ''}`,
-  }))
+  // Reminders are stored with `starts_at` (an ISO datetime); the old `date` field
+  // went away with the schema change, so every contest used to index undated.
+  getStore('col:contests', []).forEach((c) => {
+    const when = (c.starts_at || c.date || '').slice(0, 10)
+    docs.push({
+      scope: 'contest', section: 'Contest', to: '/dsa', title: c.name || 'Contest',
+      sub: [c.platform, when].filter(Boolean).join(' · '), text: `${c.name || ''} ${c.platform || ''} contest ${when}`,
+    })
+  })
   getStore('cs:topics', []).forEach((r) => docs.push({
     scope: 'cs', section: `CS · ${r.subject || 'Core'}`, to: '/cs-core',
     title: r.chapter || 'Topics', sub: r.subject || 'CS Core', text: `${r.subject} ${r.chapter} ${r.topics}`,
@@ -50,6 +59,18 @@ function buildDocs() {
     scope: 'odin', section: `Full Stack · ${it.course}`, to: '/full-stack',
     title: it.title, sub: `${it.section} · ${it.type}`, text: `${it.title} ${it.course} ${it.section} ${it.type}`,
   }))
+  const lldNotes = getStore('lld:notes', {})
+  LLD_DAYS.forEach((d) => d.items.forEach((it) => docs.push({
+    scope: 'lld', section: `LLD · ${d.phase}`, to: '/lld',
+    title: it.title, sub: `Day ${d.n} · ${d.title}`,
+    text: `${it.title} ${d.title} ${d.focus} ${d.phase} ${lldNotes[d.n] || ''}`,
+  })))
+  const sqlNotes = getStore('sql:notes', {})
+  SQL_DAYS.forEach((d) => d.items.forEach((it) => docs.push({
+    scope: 'sql', section: `SQL · ${d.phase}`, to: '/sql',
+    title: it.title, sub: `Day ${d.n} · ${d.title}`,
+    text: `${it.title} ${d.title} ${d.focus} ${d.phase} ${sqlNotes[d.n] || ''}`,
+  })))
   return docs
 }
 
