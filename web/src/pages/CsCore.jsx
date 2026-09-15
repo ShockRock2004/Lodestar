@@ -309,7 +309,10 @@ export default function CsCore() {
   const curIdx = useMemo(() => currentDayIndex(days, isDone), [days, done])
   // Date-based schedule: each day maps to a calendar date (skips excluded).
   const cal = useMemo(() => scheduleInfo('cs-core', days.length), [days.length])
-  const focusDay = Math.min(cal.todayN || curIdx, days.length)
+  // Focus the first unfinished day rather than the calendar day: ahead of schedule the
+  // calendar day is already complete, behind schedule it skips the unfinished work.
+  // The "Today" highlight in the grid stays date-based.
+  const focusDay = Math.min(curIdx, days.length)
   const active = selDay && selDay <= days.length ? selDay : focusDay
   const goDay = (delta) => setSelDay((prev) => {
     const cur = prev && prev <= days.length ? prev : focusDay
@@ -328,8 +331,6 @@ export default function CsCore() {
   const ahead = Math.max(0, doneDays - cal.due)
   const paceText = allComplete ? 'Complete' : behind ? `${behind}d behind` : ahead ? `${ahead}d ahead` : 'On track'
   const paceCls = allComplete ? 'ok' : behind ? 'late' : ahead ? 'ok' : 'ontrack'
-
-  useEffect(() => { if (rows) setStore('cs:stats', { done: doneCount, total, pct }) }, [rows, doneCount, total, pct])
 
   const subjStats = SUBJECT_ORDER.map((s) => {
     const rs = (rows || []).filter((r) => r.subject === s)

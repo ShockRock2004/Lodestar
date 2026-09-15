@@ -2,45 +2,44 @@
 // stores directly (no hooks) so it can be assembled on demand, and kept to plain
 // numbers so the model is never asked to do arithmetic.
 import { getStore, todayISO } from './store.js'
-import { readingStats, activityLast7, activityRange } from './progress.js'
-import { scheduleInfo, SCHEDULE, fmtDate } from './schedule.js'
+import { readingStats, activityLast7, currentStreak, dsaSolvedISO } from './progress.js'
+import { allTracks, overallPct } from './tracks.js'
+import { SCHEDULE, fmtDate } from './schedule.js'
 import { LLD_TOTAL_DAYS } from './lld.js'
+import { SQL_TOTAL_DAYS } from './sql.js'
 import { getChecklists, checklistSummary, progressOf } from './checklists.js'
 import { fmtRange12 } from './timephrase.js'
 import { daysToPlacement } from './ai.js'
 
-function streak() {
-  const range = activityRange(120)
-  let s = 0, i = range.length - 1
-  if (range[i] && range[i].count === 0) i--
-  for (; i >= 0 && range[i] && range[i].count > 0; i--) s++
-  return s
-}
-
 // A scheduled track whose start date is still in the future has not begun. Its 0%
 // is the plan working as intended, not a failure, so it must never be scored or
-// criticised — Low Level Design does not start until 2026-10-01.
+// criticised — LLD and SQL do not start until 2026-10-11.
 export const notStartedYet = (trackId) => {
   const cfg = SCHEDULE[trackId]
   return !!cfg && cfg.start > todayISO()
 }
 
+const todaysDsa = () => getStore('col:dsa', []).find((x) => dsaSolvedISO(x) === todayISO())
+
 export function buildTracks() {
-  const sd = readingStats('system-design')
-  const cs = getStore('cs:stats', { done: 0, total: 46, pct: 0 })
-  const odin = getStore('odin:stats', { done: 0, total: 197, pct: 0 })
-  const lld = getStore('lld:stats', { done: 0, total: 0, pct: 0, doneDays: 0 })
-  const lldBehind = Math.max(0, scheduleInfo('lld', LLD_TOTAL_DAYS).due - (lld.doneDays || 0))
-  const dsaToday = getStore('col:dsa', []).find((x) => x.date === todayISO())
+  const t = allTracks()
+  const sd = t.sd
+  const dsaToday = todaysDsa()
+  const pace = (s) => (s.behind ? `${s.behind}d behind` : s.ahead ? `${s.ahead}d ahead` : 'on track')
 
   return [
-    { name: 'DSA', pct: null, state: dsaToday ? `today's problem logged (${dsaToday.title}, ${dsaToday.score}/5)` : "today's problem NOT logged", pace: 'daily practice', behind: 0 },
-    { name: 'CS Core', pct: cs.pct, state: `${cs.done} of ${cs.total || 46} topics`, pace: 'self-paced', behind: 0 },
-    { name: 'System Design', pct: sd.pct, state: `day ${sd.currentDay} of ${sd.total}`, pace: sd.behind ? `${sd.behind}d behind` : 'on track', behind: sd.behind || 0 },
-    { name: 'Full Stack', pct: odin.pct, state: `${odin.done} of ${odin.total} items`, pace: '4-month plan', behind: 0 },
+    { name: 'DSA', pct: null, state: dsaToday ? `today's problem logged (${dsaToday.title}${dsaToday.score ? `, ${dsaToday.score}/5` : ''})` : "today's problem NOT logged", pace: 'daily practice', behind: 0 },
+    t.cs.loaded
+      ? { name: 'CS Core', pct: t.cs.pct, state: `${t.cs.done} of ${t.cs.total} topics · ${t.cs.doneDays} of ${t.cs.days} days`, pace: pace(t.cs), behind: t.cs.behind }
+      : { name: 'CS Core', pct: null, state: 'curriculum not loaded in this browser yet', pace: 'unknown', behind: 0, pending: true },
+    { name: 'System Design', pct: sd.pct, state: `day ${Math.min(sd.currentDay, sd.total)} of ${sd.total}`, pace: pace(sd), behind: sd.behind || 0 },
+    { name: 'Full Stack', pct: t.odin.pct, state: `${t.odin.done} of ${t.odin.total} items · ${t.odin.doneDays} of ${t.odin.days} days`, pace: pace(t.odin), behind: t.odin.behind },
     notStartedYet('lld')
       ? { name: 'Low Level Design', pct: null, state: `NOT STARTED — scheduled to begin ${fmtDate(SCHEDULE.lld.start)}`, pace: 'not due to have begun', behind: 0, pending: true }
-      : { name: 'Low Level Design', pct: lld.pct, state: `${lld.doneDays || 0} of ${LLD_TOTAL_DAYS} days`, pace: lldBehind ? `${lldBehind}d behind` : 'on track', behind: lldBehind },
+      : { name: 'Low Level Design', pct: t.lld.pct, state: `${t.lld.doneDays} of ${LLD_TOTAL_DAYS} days`, pace: pace(t.lld), behind: t.lld.behind },
+    notStartedYet('sql')
+      ? { name: 'SQL', pct: null, state: `NOT STARTED — scheduled to begin ${fmtDate(SCHEDULE.sql.start)}`, pace: 'not due to have begun', behind: 0, pending: true }
+      : { name: 'SQL', pct: t.sql.pct, state: `${t.sql.doneDays} of ${SQL_TOTAL_DAYS} days · ${t.sql.done} of ${t.sql.total} items`, pace: pace(t.sql), behind: t.sql.behind },
   ]
 }
 
@@ -51,7 +50,7 @@ export function buildAiContext() {
   const sum = checklistSummary(lists)
 
   const sd = readingStats('system-design')
-  const dsaToday = getStore('col:dsa', []).find((x) => x.date === todayISO())
+  const dsaToday = todaysDsa()
   const doneToday = (planId) => {
     const st = getStore(`read:${planId}`, { done: {} })
     return Object.values(st.done || {}).some((ts) => String(ts).slice(0, 10) === todayISO())
@@ -61,8 +60,7 @@ export function buildAiContext() {
     !!dsaToday,
   ]
 
-  const pcts = tracks.map((t) => t.pct).filter((p) => p != null)
-  const overall = pcts.length ? Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length) : 0
+  const overall = overallPct()
 
   const checklistDetail = lists.slice(0, 8).map((l) => {
     const p = progressOf(l)
@@ -82,7 +80,7 @@ export function buildAiContext() {
     today: todayISO(),
     daysLeft: daysToPlacement(),
     overall,
-    streak: streak(),
+    streak: currentStreak(),
     week: { total: week.total, raw: week.raw },
     todayDone: targets.filter(Boolean).length,
     todayTotal: targets.length,

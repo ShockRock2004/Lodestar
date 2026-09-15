@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { GlassSurface } from './ui/glass-surface.jsx'
 import { GlassButton } from './ui/glass-button.jsx'
 import { cn } from '../lib/utils.js'
 import { IconSearch, IconHome, IconDsa, IconCs, IconSys, IconOdin, IconLld, IconSql, IconChecklist, FlameFire, LodestarMark } from './icons.jsx'
-import { activityRange } from '../lib/progress.js'
+import { currentStreak } from '../lib/progress.js'
 
 const LINKS = [
   { to: '/', label: 'Home', Icon: IconHome },
@@ -26,14 +26,6 @@ const MOBILE = [
 // and nav links resize in perfect lockstep (seamless, no CSS-transition jank).
 const SPRING = { type: 'spring', stiffness: 210, damping: 30, mass: 1 }
 
-function navStreak() {
-  const range = activityRange(120)
-  let s = 0, i = range.length - 1
-  if (range[i] && range[i].count === 0) i--
-  for (; i >= 0 && range[i] && range[i].count > 0; i--) s++
-  return s
-}
-
 export default function GlassNavbar() {
   const loc = useLocation()
   const nav = useNavigate()
@@ -41,8 +33,19 @@ export default function GlassNavbar() {
   const rm = useReducedMotion()
   const activeIdx = Math.max(0, LINKS.findIndex((l) => l.to === loc.pathname))
   const [hovered, setHovered] = useState(activeIdx)
+  // Recount on navigation AND on any store write, so ticking a day off updates the
+  // pill immediately instead of only after the next route change.
   const [streak, setStreak] = useState(0)
-  useEffect(() => { setStreak(navStreak()) }, [loc.pathname])
+  useEffect(() => {
+    const recount = () => setStreak(currentStreak())
+    recount()
+    window.addEventListener('studyos-store', recount)
+    window.addEventListener('storage', recount)
+    return () => {
+      window.removeEventListener('studyos-store', recount)
+      window.removeEventListener('storage', recount)
+    }
+  }, [loc.pathname])
 
   useEffect(() => setHovered(activeIdx), [activeIdx])
   useEffect(() => {

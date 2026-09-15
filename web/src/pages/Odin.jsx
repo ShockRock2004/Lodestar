@@ -6,7 +6,7 @@ import { useStore } from '../lib/store.js'
 import { scheduleInfo } from '../lib/schedule.js'
 import {
   ODIN_ITEMS, ODIN_COURSE_ORDER, ODIN_TOTAL_HOURS, ODIN_PACE,
-  packOdinDays, dayHours, fmtHours, courseStats, currentDayIndex, writeOdinStats, odinPct, techForDay,
+  packOdinDays, odinPlanProgress, dayHours, fmtHours, courseStats, currentDayIndex, odinPct, techForDay, ODIN_DEFAULT_PACING,
 } from '../lib/odin.js'
 
 const PAGE = 12
@@ -56,7 +56,7 @@ export default function Odin() {
     const t = setTimeout(() => setReady(true), 620); return () => clearTimeout(t)
   }, [])
   const [done, setDone] = useStore('odin:done', {})
-  const [pacing, setPacing] = useStore('odin:pacing', 1)
+  const [pacing, setPacing] = useStore('odin:pacing', ODIN_DEFAULT_PACING)
   const [selDay, setSelDay] = useState(null)
   const [page, setPage] = useState(0)
   const swipeX = useRef(0)
@@ -69,7 +69,7 @@ export default function Odin() {
 
   // Pacing: map each unit index (1-based) to a plan-day number.
   // pacing=1: Day 1,2,3,...  pacing=2: Day 1,1,2,2,...  pacing=3: Day 1,1,1,2,2,2,...
-  const p = Math.max(1, Math.min(3, pacing || 1))
+  const p = Math.max(1, Math.min(3, pacing || ODIN_DEFAULT_PACING))
   const planDay = (unitN) => Math.ceil(unitN / p)
   const planDayCount = planDay(total)
   const dayLabel = (unitN) => unitN ? `Day ${planDay(unitN)}` : ''
@@ -77,15 +77,10 @@ export default function Odin() {
   const curIdx = useMemo(() => currentDayIndex(days, done), [days, done])
   // Date-based schedule with 2 days of work each Sat/Sun (weekend-double).
   const sched = useMemo(() => scheduleInfo('full-stack', planDayCount), [planDayCount])
-  // Map schedule's todayN (plan-day) back to a unit index for focusing.
-  const focusDay = (() => {
-    if (sched.todayN) {
-      // First unit of this plan-day
-      const first = (sched.todayN - 1) * p + 1
-      return Math.min(first, total)
-    }
-    return Math.min(curIdx, total)
-  })()
+  // Focus the first unfinished unit rather than the unit the calendar points at:
+  // working ahead used to pin a unit already ticked off, and falling behind used to
+  // skip past unfinished work. The "Today" badge stays date-based.
+  const focusDay = Math.min(curIdx, total)
   const isToday = (n) => sched.todaySet.has(planDay(n))
   const active = selDay && selDay <= total ? selDay : focusDay
   useEffect(() => { setPage(Math.floor((active - 1) / PAGE)) }, [active])
@@ -102,15 +97,16 @@ export default function Odin() {
 
   const { done: doneCount, pct } = odinPct(done)
   const cstats = courseStats(done)
-  const doneDays = days.filter((rows) => rows.every((r) => done[r.key])).length
-  const donePlanDays = planDay(doneDays)
-  const remaining = planDayCount - donePlanDays
+  // A plan-day holds `p` units and is done only once EVERY one of them is (the final
+  // day may be short). planDay() rounds up — it maps a unit to its containing day —
+  // so reusing it here credited a whole day for a single finished unit.
+  const { doneDays: donePlanDays } = odinPlanProgress(days, p, done)
+  const remaining = Math.max(0, planDayCount - donePlanDays)
   const allComplete = doneCount >= ODIN_ITEMS.length
   const behind = Math.max(0, sched.due - donePlanDays)
   const ahead = Math.max(0, donePlanDays - sched.due)
   const paceText = allComplete ? 'Complete' : behind ? `${behind}d behind` : ahead ? `${ahead}d ahead` : 'On track'
   const paceCls = allComplete ? 'ok' : behind ? 'late' : ahead ? 'ok' : 'ontrack'
-  useEffect(() => { writeOdinStats(done) }, [done])
 
   const activeRows = days[active - 1]
   const dayItem = activeRows[0]

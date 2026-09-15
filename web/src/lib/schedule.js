@@ -1,21 +1,33 @@
-// Timed schedule for date-based tracks: System Design, CS Core, Full Stack.
+// Timed schedule for the date-based tracks, aligned to the targets board:
+//
+//   Phase 1 · Sep 11 – Oct 10  DSA sheet, CS Core, System Design @ 10 pp/day,
+//                              2 Odin units/day
+//   Phase 2 · Oct 11 – Nov 10  LeetCode 150, LLD, SQL, 2 Odin units/day
+//   Phase 3 · Nov 11 – Nov 25  revision, LeetCode 75, mock interviews
+//
 // Day 1 lands on `start`; each subsequent scheduled day is the next calendar date,
-// skipping SCHEDULE_SKIPS (days the user isn't free). Full Stack packs TWO days of
-// work onto each Saturday and Sunday (weekendDouble), so it advances faster on weekends.
+// skipping SCHEDULE_SKIPS (days the user isn't free). `weekendDouble` packs two days
+// of work onto each Sat/Sun. `datedDays` caps how many days get a date at all —
+// everything past it belongs to the plan but not to the calendar.
 import { todayISO } from './store.js'
 
 export const SCHEDULE_SKIPS = ['2026-08-27', '2026-08-31', '2026-09-02']
 const SKIP = new Set(SCHEDULE_SKIPS)
 
-// keyed by the ids used across the app (reading planId 'system-design', plus our own track ids)
-// system-design restarted 2026-08-16 after a pause; start is backdated 5 days so day 6
-// (the first unread day, pp. 51+ — see SD_FROZEN in plans.js) lands on Aug 16 and day
-// 48 (the last day) lands on Sep 30. cs-core restarted from Aug 16 the same day.
+// Only Volume 1 of System Design is in the current plan: 27 days at 10 pp/day.
+// Volume 2's days exist in plans.js but are deliberately left undated.
+export const SD_DATED_DAYS = 27
+
+// Keyed by the ids used across the app (reading planId 'system-design', plus our own
+// track ids). Every track's DAY 1 falls on its `start` date — no backdating.
+// CS Core, System Design and Full Stack all begin day 1 on Sep 11; System Design's
+// day 27 (end of Volume 1) is Oct 7. LLD and SQL open phase 2 on Oct 11.
 export const SCHEDULE = {
-  'system-design': { start: '2026-08-11', weekendDouble: false },
-  'cs-core': { start: '2026-08-16', weekendDouble: false },
-  'full-stack': { start: '2026-08-01', weekendDouble: true },
-  'lld': { start: '2026-10-01', weekendDouble: false },
+  'system-design': { start: '2026-09-11', weekendDouble: false, datedDays: SD_DATED_DAYS },
+  'cs-core': { start: '2026-09-11', weekendDouble: false },
+  'full-stack': { start: '2026-09-11', weekendDouble: false },
+  'lld': { start: '2026-10-11', weekendDouble: false },
+  'sql': { start: '2026-10-11', weekendDouble: false },
 }
 
 export const isScheduled = (trackId) => !!SCHEDULE[trackId]
@@ -27,6 +39,9 @@ const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0
 export function scheduleDates(trackId, count) {
   const cfg = SCHEDULE[trackId]
   if (!cfg || !count || count < 1) return []
+  // Days beyond `datedDays` are part of the plan but not the calendar, so they get
+  // no date — and therefore can never be "due", never count toward behind/ahead.
+  if (cfg.datedDays != null) count = Math.min(count, cfg.datedDays)
   const [y, m, d] = cfg.start.split('-').map(Number)
   const dates = []
   let cur = new Date(y, m - 1, d)

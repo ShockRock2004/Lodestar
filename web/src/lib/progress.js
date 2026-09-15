@@ -5,16 +5,44 @@ import { isScheduled, scheduleInfo } from './schedule.js'
 
 const readKey = (planId) => `read:${planId}`
 
+// Every day-keyed completion store in the app. Each is `{ <key>: <ISO timestamp> }`,
+// so one shape serves the streak, the weekly chart, the heatmap and the day drill-down.
+// Keeping the list in one place is what stops a new track (SQL was the last one) from
+// silently going missing from half the graphs.
+const DONE_STORES = [
+  { key: 'read:system-design', section: 'SD', nested: true },
+  { key: 'cs:done', section: 'CS' },
+  { key: 'odin:done', section: 'FS' },
+  { key: 'lld:done', section: 'LLD' },
+  { key: 'sql:done', section: 'SQL' },
+]
+
+// `nested` stores keep their map under `.done`; the rest are the map itself.
+const doneMap = (s) => {
+  const v = getStore(s.key, s.nested ? { done: {} } : {})
+  return (s.nested ? (v && v.done) : v) || {}
+}
+
+// A DSA problem counts on the day it was solved. The collection stores
+// { status, solved_at }; rows written before the schema change only had `date`,
+// so that legacy field is still honoured.
+export const dsaSolvedISO = (x) => {
+  if (!x) return null
+  if (x.status && x.status !== 'solved') return null
+  const raw = x.solved_at || x.date || x.updated_at || x.created_at || x.created || null
+  if (!raw) return null
+  const s = typeof raw === 'number' ? new Date(raw).toISOString() : String(raw)
+  return /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : null
+}
+const dsaSolvedDates = () => getStore('col:dsa', []).map(dsaSolvedISO).filter(Boolean)
+
 function earliestActivityISO() {
   let min = null
   const consider = (d) => { if (d && (!min || d < min)) min = d }
-  ;['system-design', 'math', 'handson'].forEach((pid) => {
-    const st = getStore(`read:${pid}`, { done: {} })
-    Object.values(st.done || {}).forEach((ts) => { if (typeof ts === 'string') consider(ts.slice(0, 10)) })
+  DONE_STORES.forEach((s) => {
+    Object.values(doneMap(s)).forEach((ts) => { if (typeof ts === 'string') consider(ts.slice(0, 10)) })
   })
-  Object.values(getStore('cs:done', {})).forEach((ts) => { if (typeof ts === 'string') consider(ts.slice(0, 10)) })
-  Object.values(getStore('odin:done', {})).forEach((ts) => { if (typeof ts === 'string') consider(ts.slice(0, 10)) })
-  getStore('col:dsa', []).forEach((x) => consider(x.date || (x.created ? new Date(x.created).toISOString().slice(0, 10) : null)))
+  dsaSolvedDates().forEach(consider)
   return min
 }
 export function planStart() {
@@ -47,7 +75,7 @@ export function daysSince(iso) {
 
 export function readingStats(planId) {
   const plan = PLANS[planId]
-  if (!plan) return { pct: 0, done: 0, total: 0, currentDay: 1, day: null }
+  if (!plan) return { pct: 0, done: 0, total: 0, currentDay: 1, day: null, expectedDay: 1, behind: 0, ahead: 0, finished: false, paceLabel: 'On track' }
   const st = getStore(readKey(planId), { done: {}, notes: {} })
   const done = plan.days.filter((d) => st.done[d.n]).length
   const open = plan.days.find((d) => !st.done[d.n])
@@ -116,102 +144,96 @@ export function useCollection(key, seed = []) {
   return { items, add, update, remove, setItems }
 }
 
-export function activityLast7() {
-  const now = new Date()
-  // Bucket by UTC calendar date to match the ISO stamps stored everywhere (todayISO,
-  // cs/read/odin/dsa). Local-midnight labels were a full day off for +offset timezones.
-  const base = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  const counts = {}; const order = []
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(base - i * 86400000)
-    const k = d.toISOString().slice(0, 10); counts[k] = 0; order.push({ k, dow: d.getUTCDay() })
-  }
-  ;['system-design', 'math', 'handson'].forEach((pid) => {
-    const st = getStore(`read:${pid}`, { done: {} })
-    Object.values(st.done || {}).forEach((ts) => { const k = String(ts).slice(0, 10); if (k in counts) counts[k]++ })
+// date (ISO) -> number of completions that day, across every track.
+function completionsByDate() {
+  const map = {}
+  const bump = (iso) => { if (iso) map[iso] = (map[iso] || 0) + 1 }
+  DONE_STORES.forEach((s) => {
+    Object.values(doneMap(s)).forEach((ts) => { if (typeof ts === 'string') bump(ts.slice(0, 10)) })
   })
-  ;['dsa', 'quant'].forEach((c) => {
-    getStore(`col:${c}`, []).forEach((x) => {
-      const k = new Date(x.created || Date.now()).toISOString().slice(0, 10); if (k in counts) counts[k]++
-    })
-  })
-  Object.values(getStore('cs:done', {})).forEach((ts) => { if (typeof ts === 'string') { const k = ts.slice(0, 10); if (k in counts) counts[k]++ } })
-  Object.values(getStore('odin:done', {})).forEach((ts) => { if (typeof ts === 'string') { const k = ts.slice(0, 10); if (k in counts) counts[k]++ } })
-  Object.values(getStore('lld:done', {})).forEach((ts) => { if (typeof ts === 'string') { const k = ts.slice(0, 10); if (k in counts) counts[k]++ } })
-  const raw = order.map((o) => counts[o.k])
-  const max = Math.max(1, ...raw)
-  const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-  return { values: raw.map((v) => Math.round((v / max) * 100)), raw, total: raw.reduce((a, b) => a + b, 0), labels: order.map((o) => DOW[o.dow]) }
+  dsaSolvedDates().forEach(bump)
+  return map
 }
 
-export function activityRange(days = 91) {
+// UTC day-buckets ending today, oldest first. Every completion stamp in the app is an
+// ISO string, so bucketing by UTC date is what keeps the labels aligned with the data
+// (local-midnight buckets were a full day off for +offset timezones).
+function utcDays(n) {
   const now = new Date()
   const base = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  const map = {}
-  ;['system-design', 'math', 'handson'].forEach((pid) => {
-    const st = getStore(`read:${pid}`, { done: {} })
-    Object.values(st.done || {}).forEach((ts) => { const k = String(ts).slice(0, 10); map[k] = (map[k] || 0) + 1 })
-  })
-  ;['dsa', 'quant'].forEach((c) => {
-    getStore(`col:${c}`, []).forEach((x) => { const k = new Date(x.created || Date.now()).toISOString().slice(0, 10); map[k] = (map[k] || 0) + 1 })
-  })
-  Object.values(getStore('cs:done', {})).forEach((ts) => { if (typeof ts === 'string') { const k = ts.slice(0, 10); map[k] = (map[k] || 0) + 1 } })
-  Object.values(getStore('odin:done', {})).forEach((ts) => { if (typeof ts === 'string') { const k = ts.slice(0, 10); map[k] = (map[k] || 0) + 1 } })
-  Object.values(getStore('lld:done', {})).forEach((ts) => { if (typeof ts === 'string') { const k = ts.slice(0, 10); map[k] = (map[k] || 0) + 1 } })
   const out = []
-  for (let i = days - 1; i >= 0; i--) {
+  for (let i = n - 1; i >= 0; i--) {
     const d = new Date(base - i * 86400000)
-    const k = d.toISOString().slice(0, 10)
-    out.push({ date: k, count: map[k] || 0, dow: d.getUTCDay() })
+    out.push({ iso: d.toISOString().slice(0, 10), dow: d.getUTCDay() })
   }
   return out
 }
 
-export function cumulativeSeries(days = 30) {
-  const range = activityRange(days); let acc = 0
-  return range.map((r) => { acc += r.count; return { date: r.date.slice(5), done: acc, day: r.count } })
+export function activityLast7() {
+  const map = completionsByDate()
+  const days = utcDays(7)
+  const raw = days.map((d) => map[d.iso] || 0)
+  const max = Math.max(1, ...raw)
+  const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+  return {
+    values: raw.map((v) => Math.round((v / max) * 100)),
+    raw,
+    total: raw.reduce((a, b) => a + b, 0),
+    labels: days.map((d) => DOW[d.dow]),
+    dates: days.map((d) => d.iso),
+  }
 }
 
-export function sectionsSummary() {
-  const sd = readingStats('system-design')
-  const cs = getStore('cs:stats', { done: 0, total: 0, pct: 0 })
-  return [
-    { key: 'System Design', done: sd.done, total: sd.total, pct: sd.pct, color: '#a77bff' },
-    { key: 'CS Core', done: cs.done, total: cs.total || 46, pct: cs.pct, color: '#5fe3b6' },
-  ]
+export function activityRange(days = 91) {
+  const map = completionsByDate()
+  return utcDays(days).map((d) => ({ date: d.iso, count: map[d.iso] || 0, dow: d.dow }))
 }
 
-// Home heatmap: date -> number of distinct tracks active that day (1..5), among
-// DSA, CS Core, System Design, Full Stack. Used as the 5 heat levels.
+// Consecutive days with at least one completion, ending today (or yesterday, so an
+// as-yet-unstarted today doesn't zero out a live streak).
+export function currentStreak() {
+  const range = activityRange(400)
+  let s = 0, i = range.length - 1
+  if (range[i] && range[i].count === 0) i--
+  for (; i >= 0 && range[i] && range[i].count > 0; i--) s++
+  return s
+}
+
+// Home heatmap: date -> number of distinct tracks active that day, among DSA,
+// CS Core, System Design, Full Stack, LLD and SQL. The calendar renders 5 heat
+// levels and clamps, so a 6-track day shows at the top level.
 export function activitySectionLevels() {
   const map = {}
   const add = (iso, sec) => { if (!iso) return; (map[iso] = map[iso] || new Set()).add(sec) }
-  Object.values(getStore('read:system-design', { done: {} }).done || {}).forEach((ts) => { if (typeof ts === 'string') add(ts.slice(0, 10), 'SD') })
-  getStore('col:dsa', []).forEach((x) => add(x.date || (x.created ? new Date(x.created).toISOString().slice(0, 10) : null), 'DSA'))
-  Object.values(getStore('cs:done', {})).forEach((ts) => { if (typeof ts === 'string') add(ts.slice(0, 10), 'CS') })
-  Object.values(getStore('odin:done', {})).forEach((ts) => { if (typeof ts === 'string') add(ts.slice(0, 10), 'FS') })
-  Object.values(getStore('lld:done', {})).forEach((ts) => { if (typeof ts === 'string') add(ts.slice(0, 10), 'LLD') })
+  DONE_STORES.forEach((s) => {
+    Object.values(doneMap(s)).forEach((ts) => { if (typeof ts === 'string') add(ts.slice(0, 10), s.section) })
+  })
+  dsaSolvedDates().forEach((iso) => add(iso, 'DSA'))
   const out = {}
   Object.keys(map).forEach((k) => { out[k] = map[k].size })
   return out
 }
 
+const COUNT_TRACKS = [
+  { key: 'cs:done', kind: 'CS Core', to: '/cs-core', noun: 'topic' },
+  { key: 'odin:done', kind: 'Full Stack', to: '/full-stack', noun: 'item' },
+  { key: 'lld:done', kind: 'LLD', to: '/lld', noun: 'item' },
+  { key: 'sql:done', kind: 'SQL', to: '/sql', noun: 'item' },
+]
+
 export function entriesForDate(iso) {
   const out = []
-  const NAMES = { 'system-design': 'System Design' }
-  const TO = { 'system-design': '/system-design' }
-  ;['system-design'].forEach((pid) => {
-    const st = getStore(`read:${pid}`, { done: {} })
-    Object.entries(st.done || {}).forEach(([n, ts]) => {
-      if (String(ts).slice(0, 10) === iso) out.push({ kind: 'Reading', label: `${NAMES[pid]} · Day ${n}`, to: TO[pid] })
-    })
+  const sd = getStore('read:system-design', { done: {} })
+  Object.entries(sd.done || {}).forEach(([n, ts]) => {
+    if (String(ts).slice(0, 10) === iso) out.push({ kind: 'Reading', label: `System Design · Day ${n}`, to: '/system-design' })
   })
-  getStore('col:dsa', []).forEach((x) => { if (x.date === iso) out.push({ kind: 'DSA', label: `${x.title} · ${x.score}/5`, to: '/dsa' }) })
-  const cs = Object.values(getStore('cs:done', {})).filter((ts) => typeof ts === 'string' && ts.slice(0, 10) === iso).length
-  if (cs) out.push({ kind: 'CS Core', label: `${cs} topic${cs > 1 ? 's' : ''} completed`, to: '/cs-core' })
-  const odin = Object.values(getStore('odin:done', {})).filter((ts) => typeof ts === 'string' && ts.slice(0, 10) === iso).length
-  if (odin) out.push({ kind: 'Full Stack', label: `${odin} item${odin > 1 ? 's' : ''} completed`, to: '/full-stack' })
-  const lld = Object.values(getStore('lld:done', {})).filter((ts) => typeof ts === 'string' && ts.slice(0, 10) === iso).length
-  if (lld) out.push({ kind: 'LLD', label: `${lld} item${lld > 1 ? 's' : ''} completed`, to: '/lld' })
+  getStore('col:dsa', []).forEach((x) => {
+    if (dsaSolvedISO(x) !== iso) return
+    out.push({ kind: 'DSA', label: x.score ? `${x.title} · ${x.score}/5` : String(x.title || 'Problem'), to: '/dsa' })
+  })
+  COUNT_TRACKS.forEach((t) => {
+    const n = Object.values(getStore(t.key, {})).filter((ts) => typeof ts === 'string' && ts.slice(0, 10) === iso).length
+    if (n) out.push({ kind: t.kind, label: `${n} ${t.noun}${n > 1 ? 's' : ''} completed`, to: t.to })
+  })
   return out
 }

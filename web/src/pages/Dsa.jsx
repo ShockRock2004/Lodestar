@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { IconBack, FlameFire, PlatformLogo, CONTEST_PLATFORMS } from '../components/icons.jsx'
 import { EmptyState, Segmented, SmallRing, Dropdown, Donut } from '../components/ui.jsx'
 import { useStore, getStore, setStore } from '../lib/store.js'
+import { dsaSolvedISO } from '../lib/progress.js'
 import { useCloud } from '../lib/clouddb.js'
 import { supabase } from '../lib/supabase.js'
 import { parseSlug, fetchMeta, titleFromSlug, canonicalUrl } from '../lib/leetcode.js'
@@ -86,7 +87,7 @@ function DsaConsistency({ items }) {
   const { series, activeDays } = useMemo(() => {
     const now = new Date(); const base = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
     const map = {}
-    items.forEach((x) => { if (x.status === 'solved' && x.solved_at) { const k = String(x.solved_at).slice(0, 10); map[k] = (map[k] || 0) + 1 } })
+    items.forEach((x) => { const k = dsaSolvedISO(x); if (k) map[k] = (map[k] || 0) + 1 })
     const arr = []
     for (let i = range.k - 1; i >= 0; i--) { const k = new Date(base - i * 86400000).toISOString().slice(0, 10); arr.push(map[k] || 0) }
     const N = 14, size = Math.max(1, Math.ceil(arr.length / N)), series = []
@@ -354,12 +355,16 @@ export default function Dsa() {
   const stats = useMemo(() => {
     const solved = items.filter((x) => x.status === 'solved')
     const total = items.length
-    const dates = new Set(solved.map((x) => (x.solved_at || x.created_at || '').slice(0, 10)).filter(Boolean))
+    const dates = solved.map((x) => dsaSolvedISO(x)).filter(Boolean)
+    const daySet = new Set(dates)
     const back = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10)
-    let streak = 0, k = dates.has(back(0)) ? 0 : 1
-    while (dates.has(back(k))) { streak++; k++ }
-    const wk = Date.now() - 6 * 86400000
-    const week = solved.filter((x) => new Date(x.solved_at || x.created_at || 0).getTime() >= wk).length
+    let streak = 0, k = daySet.has(back(0)) ? 0 : 1
+    while (daySet.has(back(k))) { streak++; k++ }
+    // "This week" = the last 7 calendar days including today, matching the weekly
+    // goal ring. A rolling 144-hour cutoff used to drop problems solved earlier on
+    // the 7th day, so the count silently shrank as the day went on.
+    const from = back(6)
+    const week = dates.filter((d) => d >= from).length
     const review = solved.filter((x) => (x.score || 0) <= 2).length
     const avg = solved.length ? Math.round(solved.reduce((a, b) => a + (b.score || 0), 0) / solved.length * 10) / 10 : 0
     return { total, solved: solved.length, todo: total - solved.length, streak, week, review, avg }

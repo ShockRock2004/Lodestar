@@ -24,19 +24,6 @@ function buildDays(segments, perDay, groupName) {
   return days
 }
 
-// Split `total` units across `slots` days as evenly as possible (each day differs
-// by at most 1 unit from the others), summing exactly to `total`.
-function evenSizes(total, slots) {
-  const out = []
-  let prev = 0
-  for (let i = 1; i <= slots; i++) {
-    const cur = Math.round((total * i) / slots)
-    out.push(cur - prev)
-    prev = cur
-  }
-  return out
-}
-
 const numbered = (days) => days.map((d, i) => ({ ...d, n: i + 1 }))
 
 const SD_VOL1 = [
@@ -72,28 +59,24 @@ const SD_VOL2 = [
   { title: 'Digital Wallet', from: 356, to: 393 },
   { title: 'Stock Exchange', from: 394, to: 438 },
 ]
-// Restarted 2026-08-16 (paused for personal reasons). Days 1-5 (pp. 1-50) were
-// already read before the restart, so they're frozen exactly as before — same
-// chunking, so the existing checkmarks (day indices 1-5) still line up. Everything
-// after is redistributed across the 43 reading days between Aug 16 and Sep 30, 2026
-// (see SCHEDULE_SKIPS in schedule.js for the 3 days excluded from that window),
-// split proportionally between the two volumes' remaining page counts.
-const SD_VOL1_REMAIN = SD_VOL1.slice(3) // pp. 51+ — segments 0-2 (pp. 1-50) are the frozen days
-const SD_VOL1_REMAIN_TOTAL = SD_VOL1_REMAIN.reduce((s, seg) => s + (seg.to - seg.from + 1), 0)
-const SD_VOL2_TOTAL = SD_VOL2.reduce((s, seg) => s + (seg.to - seg.from + 1), 0)
-const SD_REMAIN_SLOTS = 43
-const SD_VOL1_SLOTS = Math.round((SD_VOL1_REMAIN_TOTAL / (SD_VOL1_REMAIN_TOTAL + SD_VOL2_TOTAL)) * SD_REMAIN_SLOTS)
-const SD_VOL2_SLOTS = SD_REMAIN_SLOTS - SD_VOL1_SLOTS
-const SD_DAYS = numbered([
-  ...buildDays(SD_VOL1.slice(0, 3), 10, 'Volume 1'),
-  ...buildDays(SD_VOL1_REMAIN, evenSizes(SD_VOL1_REMAIN_TOTAL, SD_VOL1_SLOTS), 'Volume 1'),
-  ...buildDays(SD_VOL2, evenSizes(SD_VOL2_TOTAL, SD_VOL2_SLOTS), 'Volume 2'),
-])
-
-const SD_AVG_PER_DAY = Math.round(SD_DAYS.reduce((s, d) => s + d.count, 0) / SD_DAYS.length)
+// A flat 10 pages/day across both volumes (the rate written on the targets board).
+//
+// Only Volume 1 is committed to a calendar window: day 1 (pp. 1-10) is Sep 11, 2026
+// and day 27 (ending p. 269) is Oct 7 — comfortably inside the Oct 10 target. The
+// 10-page chunking matches what was used before, so any existing checkmarks still
+// line up with the same pages.
+// Volume 2 is kept in the plan so its days stay visible and tickable, but it carries
+// NO dates (see SD_DATED_DAYS in schedule.js): it is not part of the current plan, so
+// it must never drag the pace figure. Pace measures Volume 1; the percentage still
+// covers the whole book set, and the per-volume bars break it down.
+const SD_PER_DAY = 10
+const SD_VOL1_DAYS = buildDays(SD_VOL1, SD_PER_DAY, 'Volume 1')
+const SD_VOL2_DAYS = buildDays(SD_VOL2, SD_PER_DAY, 'Volume 2')
+export const SD_VOL1_TOTAL_DAYS = SD_VOL1_DAYS.length
+const SD_DAYS = numbered([...SD_VOL1_DAYS, ...SD_VOL2_DAYS])
 
 export const PLANS = {
-  'system-design': { id: 'system-design', title: 'System Design', source: 'Alex Xu · Vol 1 + 2', perDay: SD_AVG_PER_DAY, days: SD_DAYS, total: SD_DAYS.length },
+  'system-design': { id: 'system-design', title: 'System Design', source: 'Alex Xu · Vol 1 + 2', perDay: SD_PER_DAY, days: SD_DAYS, total: SD_DAYS.length },
 }
 
 export function groupDays(days) {
