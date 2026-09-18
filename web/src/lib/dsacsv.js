@@ -32,6 +32,23 @@ const normDiff = (s) => {
 }
 const splitTopics = (s) => norm(s).split(/[;|]/).map((t) => t.trim()).filter(Boolean)
 
+// Fallback slug for non-LeetCode URLs (GFG, takeuforward, etc) so they aren't dropped by
+// parseSlug (which only recognizes leetcode.com/problems/<slug>). Keeps the real URL intact
+// — unlike the old "gfg-<slug>" workaround, this does NOT get rewritten to a fake
+// leetcode.com link, since parseDsaCsv already keeps rawUrl verbatim when it's http(s).
+const fallbackSlug = (url) => {
+  try {
+    const u = new URL(url)
+    const segs = u.pathname.replace(/\/+$/, '').split('/').filter(Boolean)
+    // GFG-style URLs end in a bare numeric id (.../problems/bfs-traversal-of-graph/1) —
+    // that alone isn't unique, so fold in the preceding segment too.
+    let tail = segs[segs.length - 1] || ''
+    if (/^\d+$/.test(tail) && segs.length > 1) tail = `${segs[segs.length - 2]}-${tail}`
+    const host = u.hostname.replace(/^www\./, '').split('.')[0]
+    return `${host}-${tail || 'page'}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  } catch { return '' }
+}
+
 // Parse CSV text into DSA drafts. Header required; columns matched by name.
 export function parseDsaCsv(text) {
   const rows = parseCsv(text)
@@ -47,7 +64,8 @@ export function parseDsaCsv(text) {
   for (let r = 1; r < rows.length; r++) {
     const cells = rows[r]
     const rawUrl = iUrl >= 0 ? norm(cells[iUrl]) : ''
-    const slug = parseSlug(rawUrl)
+    let slug = parseSlug(rawUrl)
+    if (!slug && /^https?:\/\//i.test(rawUrl)) slug = fallbackSlug(rawUrl)
     if (!slug) { skipped++; continue }
     const status = iStat >= 0 && /solv|done|1|yes/i.test(norm(cells[iStat])) ? 'solved' : 'todo'
     drafts.push({
