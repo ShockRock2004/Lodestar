@@ -7,13 +7,12 @@ import CalendarCard from '../components/CalendarCard.jsx'
 import { useReading, useCollection, entriesForDate, activitySectionLevels, currentStreak, dsaSolvedISO } from '../lib/progress.js'
 import { allTracks, overallPct } from '../lib/tracks.js'
 import { getStore, useStore, useStoreTick, todayISO } from '../lib/store.js'
-import { IconChevron, IconDsa, IconSys, IconCs, IconOdin, IconLld, IconSql, IconChecklist } from '../components/icons.jsx'
+import { IconChevron, IconDsa, IconSys, IconCs, IconOdin, IconLld, IconSql } from '../components/icons.jsx'
 import { LLD_TOTAL_DAYS } from '../lib/lld.js'
 import { SQL_TOTAL_DAYS } from '../lib/sql.js'
 import SwipeDeck from '../components/SwipeDeck.jsx'
 import AiPanel from '../components/AiPanel.jsx'
-import { CHECKLIST_KEY, checklistSummary, urgentFeed } from '../lib/checklists.js'
-import { to12h } from '../lib/timephrase.js'
+import TodayDeck from '../components/TodayDeck.jsx'
 
 const H = new Date().getHours()
 const GREET = H < 12 ? 'Good morning' : H < 18 ? 'Good afternoon' : 'Good evening'
@@ -218,57 +217,6 @@ function TrackCard({ t }) {
 }
 
 /* ---------- right rail ---------- */
-// Replaces the old Momentum sparkline: the week's bar chart already exists on the
-// Overview page, whereas nothing surfaced the checklist board from home.
-function ChecklistCard() {
-  const [lists] = useStore(CHECKLIST_KEY, [])
-  const sum = checklistSummary(lists)
-  const feed = urgentFeed(lists).slice(0, 3)
-
-  return (
-    <Link to="/checklist" className="ck-home-link block">
-      <Card variant="soft" className="cg-w ck-home flex flex-col p-6">
-        <div className="flex items-center justify-between">
-          <span className="flex items-center gap-2 text-[13px] text-[#a1a1a1]">
-            <span className="ck-home-ico" aria-hidden="true"><IconChecklist /></span>Checklist
-          </span>
-          {sum.urgentOpen > 0
-            ? <span className="ck-home-crit">{sum.urgentOpen} urgent</span>
-            : <span className="text-[12.5px] text-[#737373]">{sum.active} active</span>}
-        </div>
-
-        <div className="mt-1 text-[26px] font-bold tracking-tight text-white">
-          {sum.openItems}<span className="ml-1.5 text-[13px] font-normal text-[#737373]">open {sum.openItems === 1 ? 'objective' : 'objectives'}</span>
-        </div>
-
-        <div className="ck-bar ck-bar--wide mt-3" role="progressbar" aria-valuenow={sum.pct} aria-valuemin={0} aria-valuemax={100} aria-label="Checklist completion">
-          <i style={{ width: sum.pct + '%', background: sum.pct === 100 ? '#2FB893' : '#e6e6e6' }} />
-        </div>
-        <div className="mt-1.5 flex items-center justify-between text-[11.5px] text-[#6a6a6a]">
-          <span>{sum.doneItems} of {sum.totalItems} done</span>
-          <span>{sum.doneToday} today</span>
-        </div>
-
-        <div className="ck-home-feed">
-          {feed.length === 0
-            ? <div className="ck-empty-sm">No objectives yet — open the board to add one.</div>
-            : feed.map((r) => (
-              <div className="ck-home-row" key={r.item.id}>
-                <span className="ck-home-pip" style={{ background: r.urgency.color }} aria-hidden="true" />
-                {r.item.start != null && (
-                  <span className={'ck-t is-' + (r.state || 'later')}>{to12h(r.item.start)}</span>
-                )}
-                <span className="ck-home-t">{r.item.text}</span>
-              </div>
-            ))}
-        </div>
-
-        <span className="ck-home-cta">Open board <IconChevron /></span>
-      </Card>
-    </Link>
-  )
-}
-
 function ScheduleCard() {
   const today = todayISO()
   const rel = (iso) => { const n = Math.round((new Date(iso + 'T00:00') - new Date(today + 'T00:00')) / 86400000); return n <= 0 ? 'Today' : n === 1 ? 'Tomorrow' : `in ${n}d` }
@@ -487,7 +435,7 @@ export default function CryptgenBento() {
           />
         </div>
         <div className="flex flex-col gap-5">
-          <Reveal delay={0.06}><ChecklistCard /></Reveal>
+          <Reveal delay={0.06}><TodayDeck /></Reveal>
           <Reveal delay={0.1} className="flex min-h-0 flex-1 flex-col"><Calendar /></Reveal>
         </div>
       </div>

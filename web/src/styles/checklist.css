@@ -873,6 +873,97 @@
 .ck-home-link:hover .ck-home-cta { color: #eaeaea; gap: 8px; }
 
 /* ============================================================
+   6b. HOME · TODAY DECK (checklist ⇄ today's plan)
+   Same construction as the tracks deck: the page wrapper owns the shimmer
+   border and the black ground, the real card sits inside it.
+   ============================================================ */
+.td-shell { display: flex; padding: 5px; background: #000 !important; }
+/* min-width:0 or the nowrap summary lines set a min-content floor and push the
+   card wider than the shell that is supposed to clip it. */
+.td-shell > .ck-home-link, .td-shell > .td-agenda { flex: 1; min-width: 0; min-height: 0; }
+
+/* The big date, shared by page 1's header. */
+.td-date { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.td-date-num {
+  font-size: 52px; font-weight: 800; line-height: .84;
+  letter-spacing: -.045em; color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+.td-date-rest { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.td-date-day { font-size: 21px; font-weight: 700; letter-spacing: -.02em; line-height: 1; color: #fafafa; }
+.td-date-mon { font-size: 12.5px; color: var(--ck-ink-4); }
+
+/* ---- page 2 ---- */
+.td-agenda { gap: 0; }
+.td-head { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+.td-head-n {
+  font-size: 40px; font-weight: 800; line-height: .86; letter-spacing: -.045em;
+  color: #fff; font-variant-numeric: tabular-nums;
+}
+.td-head-l { font-size: 12px; line-height: 1.35; color: var(--ck-ink-4); }
+
+.td-rows {
+  margin-top: 14px; padding-top: 4px; border-top: 1px solid #191919;
+  display: flex; flex-direction: column;
+  flex: 1; min-height: 0;
+}
+
+.td-row {
+  display: flex; align-items: center; gap: 11px; min-width: 0;
+  padding: 10px 2px; text-decoration: none;
+  border-bottom: 1px solid #141414;
+}
+.td-row:last-child { border-bottom: 0; }
+.td-row-ico {
+  width: 28px; height: 28px; flex: none;
+  display: grid; place-items: center; border-radius: 9px;
+  border: 1px solid var(--ck-line); background: rgba(255, 255, 255, .03);
+  color: var(--ck-ink-3);
+  transition: color .16s ease, border-color .16s ease;
+}
+.td-row-ico svg { width: 14px; height: 14px; }
+.td-row:hover .td-row-ico { color: #fff; border-color: #3d3d3d; }
+
+.td-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.td-row-top { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.td-row-name {
+  font-size: 13px; font-weight: 600; letter-spacing: -.01em; color: #fafafa;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.td-row-left { flex: 1; text-align: right; font-size: 11.5px; color: var(--ck-ink-4); white-space: nowrap; }
+.td-behind {
+  flex: none; font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  color: #ff5252; border: 1px solid rgba(255, 82, 82, .38); background: rgba(255, 82, 82, .1);
+  border-radius: 999px; padding: 1px 6px;
+}
+.td-row-sub {
+  font-size: 11.5px; color: var(--ck-ink-5);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.td-row-bar { margin-top: 3px; height: 3px; border-radius: 999px; background: #1c1c1c; overflow: hidden; }
+.td-row-bar i { display: block; height: 100%; border-radius: 999px; background: #d4d4d4; transition: width .4s ease; }
+.td-row-go { flex: none; color: #3a3a3a; display: grid; place-items: center; transition: color .16s ease, transform .16s ease; }
+.td-row-go svg { width: 14px; height: 14px; }
+.td-row:hover .td-row-go { color: #cfcfcf; transform: translateX(2px); }
+
+.td-quiet { margin-top: 13px; padding-top: 12px; border-top: 1px solid #191919; display: flex; flex-wrap: wrap; gap: 6px; }
+.td-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--ck-line); border-radius: 999px; padding: 4px 10px;
+  font-size: 11.5px; font-weight: 600; color: var(--ck-ink-4); text-decoration: none;
+  transition: border-color .16s ease, color .16s ease;
+}
+.td-chip:hover { border-color: #3d3d3d; color: #e6e6e6; }
+.td-chip-s { font-weight: 500; color: var(--ck-ink-5); }
+.td-chip.is-clear .td-chip-s, .td-chip.is-finished .td-chip-s { color: var(--ck-ok); }
+
+@media (max-width: 640px) {
+  .td-date-num { font-size: 42px; }
+  .td-date-day { font-size: 18px; }
+  .td-item-m { display: none; }
+}
+
+/* ============================================================
    7. RESPONSIVE
    ============================================================ */
 @media (max-width: 1180px) {
