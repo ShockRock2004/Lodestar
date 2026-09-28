@@ -4,7 +4,8 @@ import { IconBack } from '../components/icons.jsx'
 import { SmallRing, EmptyState, Segmented } from '../components/ui.jsx'
 import { supabase } from '../lib/supabase.js'
 import { useStore, setStore } from '../lib/store.js'
-import { PACE_OPTIONS, DEFAULT_PACE, PACE_LABEL, makeRowMins, packInterleaved, dayMinutes, currentDayIndex, fmtDuration } from '../lib/csplan.js'
+import { PACE_OPTIONS, DEFAULT_PACE, PACE_LABEL, makeRowMins, packInterleaved, dayMinutes, currentDayIndex, fmtDuration, ytid } from '../lib/csplan.js'
+import { VIDEO_DURATIONS } from '../lib/csdurations.js'
 import { activityRange } from '../lib/progress.js'
 import { scheduleInfo } from '../lib/schedule.js'
 
@@ -16,6 +17,22 @@ const lines = (s) => (s || '').split('\n').map((x) => x.trim()).filter(Boolean)
 
 function Play() {
   return <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+}
+function WatchLink({ url }) {
+  const id = ytid(url)
+  const mins = id ? VIDEO_DURATIONS[id] : null
+  const len = mins != null ? fmtDuration(mins) : null
+  return (
+    <a className="cs-watch" href={url} target="_blank" rel="noreferrer" aria-label={len ? `Watch · ${len}` : 'Watch'}>
+      <Play /> Watch
+      {len && (
+        <span className="cs-watch-tip" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+          {len}
+        </span>
+      )}
+    </a>
+  )
 }
 function Check({ done, onClick, label }) {
   return (
@@ -61,7 +78,7 @@ function TopicRow({ r, done, toggle, showHeading = true, divider = false }) {
           {topics.map((t, i) => (
             <li key={i}>
               <span className="cs-topic-t">{t}</span>
-              {urls[i] ? <a className="cs-watch" href={urls[i]} target="_blank" rel="noreferrer"><Play /> Watch</a> : null}
+              {urls[i] ? <WatchLink url={urls[i]} /> : null}
             </li>
           ))}
         </ul>
@@ -84,7 +101,7 @@ function SubjectBlock({ group, isDone, markAll, divider }) {
             return topics.map((t, i) => (
               <li key={r.id + '-' + i}>
                 <span className="cs-topic-t">{t}</span>
-                {urls[i] ? <a className="cs-watch" href={urls[i]} target="_blank" rel="noreferrer"><Play /> Watch</a> : null}
+                {urls[i] ? <WatchLink url={urls[i]} /> : null}
               </li>
             ))
           })}
